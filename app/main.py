@@ -1,17 +1,34 @@
-# Main application file
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+import os
 
-app = FastAPI()
+app = FastAPI(
+    title="Team Emotional Intelligence Backend",
+    version="1.0.0",
+)
 
-class WebhookData(BaseModel):
-    data: dict | None = None
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
-def home():
-    return {"status": "Backend running with FastAPI!"}
+def root():
+    return {"status": "Backend running", "message": "Hello from FastAPI"}
 
-@app.post("/webhook")
-def receive_webhook(payload: WebhookData):
-    print("Webhook received:", payload)
-    return {"message": "Webhook OK"}
+@app.post("/analyze")
+def analyze_message(data: dict):
+    """
+    Placeholder until real AI logic is added in Phase 2.
+    """
+    return {
+        "sentiment": "neutral",
+        "emotion": "none",
+        "stress_score": 0,
+        "category": "general",
+        "suggested_reply": "Thank you for your message.",
+    }
