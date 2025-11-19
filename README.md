@@ -324,3 +324,4 @@ For issues, questions, or contributions, please [open an issue](https://github.c
 - Built with [FastAPI](https://fastapi.tiangolo.com)
 - Powered by [Google Gemini](https://deepmind.google/technologies/gemini/)
 - Rate limiting by [SlowAPI](https://github.com/laurentS/slowapi)
+<!-- Trigger workflows after workflow file changes -->
