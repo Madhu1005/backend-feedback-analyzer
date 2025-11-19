@@ -18,7 +18,6 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.core.config import get_settings
 from app.schemas.analysis import AnalyzeRequest
 from app.services.analyzer import create_analyzer
 
@@ -30,7 +29,7 @@ router = APIRouter()
 def _get_limiter():
     """
     Get rate limiter from app state.
-    
+
     Falls back to in-memory limiter if app not available (e.g., during testing).
     """
     try:
@@ -44,10 +43,10 @@ def _get_limiter():
 def _rate_limit(limit_spec: str = "60/minute"):
     """
     Decorator factory for rate limiting endpoints.
-    
+
     Args:
         limit_spec: Rate limit specification (e.g., "60/minute")
-    
+
     Returns:
         Rate limit decorator using app's configured limiter
     """
@@ -57,7 +56,7 @@ def _rate_limit(limit_spec: str = "60/minute"):
 class AnalysisResponseEnvelope(BaseModel):
     """
     Envelope for successful analysis response.
-    
+
     Wraps the analysis result with metadata about the request processing.
     """
     success: bool = True
@@ -132,26 +131,25 @@ async def analyze_message(
 ) -> AnalysisResponseEnvelope:
     """
     Analyze a message for sentiment, emotion, and stress level.
-    
+
     This endpoint:
     1. Validates and sanitizes input
     2. Detects potential threats (prompt injection, PII, etc.)
     3. Uses LLM to analyze sentiment, emotion, stress
     4. Returns structured analysis with confidence scores
-    
+
     **Rate Limit:** 60 requests per minute per IP address
-    
+
     Args:
         request: FastAPI request object (for rate limiting)
         analyze_request: Message to analyze with optional metadata
-        
+
     Returns:
         AnalysisResponseEnvelope with analysis results and metadata
-        
+
     Raises:
         HTTPException: 400, 422, 429, 500, or 503 for various error conditions
     """
-    settings = get_settings()
     start_time = time.time()
 
     try:
@@ -168,7 +166,7 @@ async def analyze_message(
                     "message": "Analysis service is temporarily unavailable",
                     "details": {"reason": "LLM service initialization failed"}
                 }
-            )
+            ) from e
 
         # Perform analysis
         try:
@@ -184,7 +182,7 @@ async def analyze_message(
                     "message": str(e),
                     "details": {"field": "message"}
                 }
-            )
+            ) from e
         except Exception as e:
             # Unexpected errors
             logger.error(f"Analysis failed: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -196,7 +194,7 @@ async def analyze_message(
                     "message": "An unexpected error occurred during analysis",
                     "details": {"error_type": type(e).__name__}
                 }
-            )
+            ) from e
 
         # Calculate total processing time
         processing_time_ms = (time.time() - start_time) * 1000
@@ -245,4 +243,4 @@ async def analyze_message(
                 "message": "An unexpected error occurred",
                 "details": {"error_type": type(e).__name__}
             }
-        )
+        ) from e
