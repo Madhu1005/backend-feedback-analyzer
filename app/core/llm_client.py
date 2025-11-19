@@ -154,11 +154,11 @@ class GeminiClient:
         # 3) response.output_text or response.output
         for attr in ("output_text", "output", "content"):
             if hasattr(response, attr):
-                val = getattr(response, attr)
+                val = getattr(response, attr, None)
                 if isinstance(val, str):
-                    val = val.strip()
-                    if val:
-                        return val
+                    val_str = val.strip()
+                    if val_str:
+                        return val_str
 
         raise ValueError("Unable to extract text from Gemini response object")
 
@@ -278,7 +278,7 @@ class GeminiClient:
             response = AnalyzeResponse(**data)
 
             # Convert back to dict (ensures all transformations applied)
-            validated_dict = response.model_dump()
+            validated_dict: dict[str, Any] = response.model_dump()
 
             logger.info("Response validation successful")
             return validated_dict
@@ -323,7 +323,8 @@ class GeminiClient:
 
         # Try incremental repairs: try parse; if fails, attempt small fixes
         try:
-            return json.loads(body)
+            result: dict[str, Any] = json.loads(body)
+            return result
         except json.JSONDecodeError:
             # Last ditch: try to balance braces (only if clearly truncated)
             open_count = body.count("{")
@@ -331,7 +332,7 @@ class GeminiClient:
             if open_count > close_count and (open_count - close_count) <= 2:
                 body += "}" * (open_count - close_count)
                 try:
-                    parsed = json.loads(body)
+                    parsed: dict[str, Any] = json.loads(body)
                     logger.info("JSON repair successful (added closing braces)")
                     return parsed
                 except json.JSONDecodeError:

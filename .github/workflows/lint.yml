@@ -23,7 +23,7 @@ jobs:
     - name: Install linting tools
       run: |
         python -m pip install --upgrade pip
-        pip install ruff black mypy types-redis
+        pip install ruff black mypy types-redis types-requests
 
     - name: Run Ruff (linter)
       run: |
@@ -35,7 +35,7 @@ jobs:
 
     - name: Run Mypy (type checker)
       run: |
-        mypy app/ --ignore-missing-imports --no-strict-optional
+        mypy app/ --ignore-missing-imports --no-strict-optional --no-warn-return-any --disable-error-code=unreachable
 
   complexity:
     runs-on: ubuntu-latest

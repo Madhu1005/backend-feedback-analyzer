@@ -177,7 +177,7 @@ class AnalyzeResponse(BaseModel):
                 sanitized_val = re.sub(r"[`{}\\\[\]]", "", sanitized_val)
                 sanitized[key] = sanitized_val[:100]  # Limit length
             elif isinstance(value, (int, float, bool)):
-                sanitized[key] = value
+                sanitized[key] = str(value)  # Convert to string for consistent type
             else:
                 # Convert other types to string and sanitize
                 sanitized[key] = str(value)[:50]
@@ -225,7 +225,11 @@ def get_clean_schema() -> dict[str, Any]:
         Simplified schema suitable for inclusion in system prompts
     """
     schema = AnalyzeResponse.model_json_schema()
-    return _remove_titles_recursive(schema)
+    result = _remove_titles_recursive(schema)
+    # Ensure we return a dict, not Any
+    if not isinstance(result, dict):
+        return {}
+    return result
 
 
 # JSON Schema export for LLM function-calling

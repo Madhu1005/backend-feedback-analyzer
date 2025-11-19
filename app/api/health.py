@@ -93,7 +93,8 @@ async def liveness_check() -> HealthResponse:
     Returns:
         HealthResponse with basic service info
     """
-    return await health_check()
+    result: HealthResponse = await health_check()
+    return result
 
 
 @router.get(

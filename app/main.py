@@ -216,14 +216,19 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     # If detail is a dict with error info, use it directly
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    elif isinstance(exc.detail, str):
+        detail_str = exc.detail
+    else:
+        # Handle other types (unlikely but for type safety)
+        detail_str = str(exc.detail) if exc.detail is not None else "Unknown error"
 
-    # Otherwise, wrap string detail in standard format
+    # Wrap string detail in standard format
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
             "error": "http_error",
-            "message": exc.detail,
+            "message": detail_str,
             "status_code": exc.status_code,
         },
     )
