@@ -148,8 +148,8 @@ class GeminiClient:
                     for key in ("output", "text", "content"):
                         if key in cand and isinstance(cand[key], str) and cand[key].strip():
                             return cand[key].strip()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Exception during candidate extraction: {e}")
 
         # 3) response.output_text or response.output
         for attr in ("output_text", "output", "content"):

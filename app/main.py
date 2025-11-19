@@ -142,7 +142,7 @@ app = FastAPI(
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address, storage_uri=settings.rate_limit_storage_uri)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
 # CORS middleware

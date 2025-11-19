@@ -154,7 +154,7 @@ class AnalyzeResponse(BaseModel):
         if not v:
             return v
 
-        sanitized = {}
+        sanitized: dict[str, Any] = {}
         SAFE_KEYS = {
             "model",
             "tokens",
