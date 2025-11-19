@@ -16,13 +16,13 @@ Version: 1.0.0
 """
 import logging
 import time
-from typing import Dict, Any
-from fastapi import APIRouter, status, Response
+from typing import Any
+
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.llm_client import create_gemini_client
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -42,7 +42,7 @@ class ReadinessResponse(BaseModel):
     timestamp: float
     version: str
     environment: str
-    checks: Dict[str, Dict[str, Any]]
+    checks: dict[str, dict[str, Any]]
 
 
 @router.get(
@@ -64,7 +64,7 @@ async def health_check() -> HealthResponse:
         HealthResponse with basic service info
     """
     settings = get_settings()
-    
+
     return HealthResponse(
         status="healthy",
         timestamp=time.time(),
@@ -118,7 +118,7 @@ async def readiness_check(response: Response) -> ReadinessResponse:
     settings = get_settings()
     checks = {}
     all_ready = True
-    
+
     # Check 1: Configuration validity
     try:
         checks["configuration"] = {
@@ -132,12 +132,12 @@ async def readiness_check(response: Response) -> ReadinessResponse:
             "message": f"Configuration error: {type(e).__name__}"
         }
         all_ready = False
-    
+
     # Check 2: LLM service connectivity (quick test)
     if settings.health_check_enabled:
         try:
             # Attempt to create client (doesn't make API call)
-            client = create_gemini_client()
+            _ = create_gemini_client()
             checks["llm_service"] = {
                 "status": "healthy",
                 "message": f"LLM client initialized: {settings.gemini_model}",
@@ -164,11 +164,11 @@ async def readiness_check(response: Response) -> ReadinessResponse:
             "status": "skipped",
             "message": "Health check disabled in configuration"
         }
-    
+
     # Set response status based on checks
     if not all_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    
+
     return ReadinessResponse(
         status="ready" if all_ready else "not_ready",
         timestamp=time.time(),

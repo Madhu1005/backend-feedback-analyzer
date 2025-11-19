@@ -2,9 +2,9 @@
 Pydantic v2 models for message analysis request/response.
 Includes JSON schema export for LLM function-calling.
 """
-from typing import Dict, List, Optional
-from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SentimentEnum(str, Enum):
@@ -46,7 +46,7 @@ class CategoryEnum(str, Enum):
 class ConfidenceScores(BaseModel):
     """Confidence scores for each classification"""
     model_config = ConfigDict(extra='forbid')
-    
+
     sentiment: float = Field(..., ge=0.0, le=1.0, description="Confidence in sentiment classification")
     emotion: float = Field(..., ge=0.0, le=1.0, description="Confidence in emotion detection")
     category: float = Field(..., ge=0.0, le=1.0, description="Confidence in category classification")
@@ -56,30 +56,30 @@ class ConfidenceScores(BaseModel):
 class AnalyzeRequest(BaseModel):
     """Request schema for message analysis endpoint"""
     model_config = ConfigDict(extra='forbid')
-    
+
     message: str = Field(
-        ..., 
-        min_length=1, 
+        ...,
+        min_length=1,
         max_length=5000,
         description="The message text to analyze"
     )
     user_id: str = Field(
-        ..., 
+        ...,
         min_length=1,
         max_length=100,
         description="ID of the user who sent the message"
     )
     channel_id: str = Field(
-        ..., 
+        ...,
         min_length=1,
         max_length=100,
         description="ID of the channel where message was sent"
     )
-    context: Optional[Dict[str, str]] = Field(
+    context: dict[str, str] | None = Field(
         default=None,
         description="Optional contextual information"
     )
-    
+
     @field_validator('message')
     @classmethod
     def message_not_empty(cls, v: str) -> str:
@@ -92,7 +92,7 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     """Response schema for message analysis"""
     model_config = ConfigDict(extra='forbid')
-    
+
     sentiment: SentimentEnum = Field(
         ...,
         description="Overall sentiment of the message"
@@ -111,17 +111,17 @@ class AnalyzeResponse(BaseModel):
         ...,
         description="Message category classification"
     )
-    key_phrases: List[str] = Field(
+    key_phrases: list[str] = Field(
         default_factory=list,
         max_length=10,
         description="Important phrases extracted from message"
     )
-    suggested_reply: Optional[str] = Field(
+    suggested_reply: str | None = Field(
         default=None,
         max_length=1000,
         description="AI-suggested reply for manager/team lead"
     )
-    action_items: List[str] = Field(
+    action_items: list[str] = Field(
         default_factory=list,
         max_length=5,
         description="Recommended action items"
@@ -134,20 +134,20 @@ class AnalyzeResponse(BaseModel):
         default=False,
         description="Whether message requires immediate attention"
     )
-    model_debug: Optional[Dict] = Field(
+    model_debug: dict | None = Field(
         default=None,
         description="Debug info: model name, tokens, latency, fallback_used"
     )
-    
+
     @field_validator('key_phrases')
     @classmethod
-    def validate_key_phrases(cls, v: List[str]) -> List[str]:
+    def validate_key_phrases(cls, v: list[str]) -> list[str]:
         """Ensure key phrases are not empty strings"""
         return [phrase.strip() for phrase in v if phrase.strip()]
-    
+
     @field_validator('action_items')
     @classmethod
-    def validate_action_items(cls, v: List[str]) -> List[str]:
+    def validate_action_items(cls, v: list[str]) -> list[str]:
         """Ensure action items are not empty strings"""
         return [item.strip() for item in v if item.strip()]
 

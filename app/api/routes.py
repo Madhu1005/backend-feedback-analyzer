@@ -9,7 +9,6 @@ from fastapi import APIRouter
 
 from app.api import analyze, health
 
-
 # Create main API router with versioning
 api_router = APIRouter()
 

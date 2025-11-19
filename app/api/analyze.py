@@ -11,17 +11,16 @@ Version: 1.0.0
 """
 import logging
 import time
-from typing import Optional, Dict, Any
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.schemas.analysis import AnalyzeRequest
-from app.services.analyzer import create_analyzer, MessageAnalyzer
 from app.core.config import get_settings
-
+from app.schemas.analysis import AnalyzeRequest
+from app.services.analyzer import create_analyzer
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -62,11 +61,11 @@ class AnalysisResponseEnvelope(BaseModel):
     Wraps the analysis result with metadata about the request processing.
     """
     success: bool = True
-    analysis: Dict[str, Any] = Field(..., description="Analysis results from LLM")
-    sanitization: Dict[str, Any] = Field(..., description="Input sanitization details")
+    analysis: dict[str, Any] = Field(..., description="Analysis results from LLM")
+    sanitization: dict[str, Any] = Field(..., description="Input sanitization details")
     processing_time_ms: float = Field(..., description="Total processing time in milliseconds")
     llm_used: bool = Field(..., description="Whether LLM was used (vs fallback)")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -94,8 +93,8 @@ class ErrorResponse(BaseModel):
     success: bool = False
     error: str = Field(..., description="Error type or code")
     message: str = Field(..., description="Human-readable error message")
-    details: Optional[Dict[str, Any]] = Field(default=None, description="Additional error details")
-    
+    details: dict[str, Any] | None = Field(default=None, description="Additional error details")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -154,7 +153,7 @@ async def analyze_message(
     """
     settings = get_settings()
     start_time = time.time()
-    
+
     try:
         # Create analyzer (with LLM client)
         try:
@@ -170,7 +169,7 @@ async def analyze_message(
                     "details": {"reason": "LLM service initialization failed"}
                 }
             )
-        
+
         # Perform analysis
         try:
             result = analyzer.analyze(analyze_request)
@@ -198,16 +197,16 @@ async def analyze_message(
                     "details": {"error_type": type(e).__name__}
                 }
             )
-        
+
         # Calculate total processing time
         processing_time_ms = (time.time() - start_time) * 1000
-        
+
         # Extract analysis result
         analysis_dict = result.analysis
-        
+
         # Check if LLM was used or fallback
         llm_used = not analysis_dict.get("model_debug", {}).get("fallback_used", False)
-        
+
         # Build response
         response = AnalysisResponseEnvelope(
             success=True,
@@ -220,7 +219,7 @@ async def analyze_message(
             processing_time_ms=round(processing_time_ms, 2),
             llm_used=llm_used
         )
-        
+
         # Log successful analysis (metadata only, no user content)
         logger.info(
             f"Analysis completed: "
@@ -229,9 +228,9 @@ async def analyze_message(
             f"llm_used={llm_used}, "
             f"time={processing_time_ms:.2f}ms"
         )
-        
+
         return response
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions
         raise

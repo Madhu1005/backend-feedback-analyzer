@@ -16,20 +16,20 @@ Version: 1.0.0
 import logging
 import sys
 import time
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Callable
 
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.config import get_settings
 from app.api.routes import api_router
+from app.core.config import get_settings
 
 
 # Configure logging (deferred until startup to avoid import-time settings loading)
@@ -55,7 +55,7 @@ def setup_logging(settings_override=None):
             handlers=[logging.StreamHandler(sys.stdout)]
         )
         return
-    
+
     # Root logger configuration
     logging.basicConfig(
         level=getattr(logging, settings.log_level),
@@ -64,7 +64,7 @@ def setup_logging(settings_override=None):
             logging.StreamHandler(sys.stdout)
         ]
     )
-    
+
     # Add file handler if configured
     if settings.log_file:
         file_handler = logging.FileHandler(settings.log_file)
@@ -72,7 +72,7 @@ def setup_logging(settings_override=None):
             logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         )
         logging.getLogger().addHandler(file_handler)
-    
+
     # Reduce noise from external libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -97,29 +97,29 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(settings)
     logger = logging.getLogger(__name__)
-    
+
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"API prefix: {settings.api_prefix}")
     logger.info(f"Rate limit: {settings.rate_limit_per_minute}/min")
-    
+
     # Verify LLM configuration
     try:
         from app.core.llm_client import create_gemini_client
-        client = create_gemini_client()
+        _ = create_gemini_client()
         logger.info(f"LLM client initialized: {settings.gemini_model}")
     except Exception as e:
         logger.error(f"LLM client initialization failed: {type(e).__name__}")
         if settings.is_production:
             raise  # Fail fast in production
         logger.warning("Continuing without LLM client (non-production environment)")
-    
+
     logger.info("Application startup complete")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Application shutdown initiated")
     # Add cleanup logic here (close connections, etc.)
@@ -166,10 +166,10 @@ async def add_request_id(request: Request, call_next: Callable):
     """
     request_id = f"{int(time.time() * 1000)}-{id(request)}"
     request.state.request_id = request_id
-    
+
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
-    
+
     return response
 
 
@@ -182,13 +182,13 @@ async def log_requests(request: Request, call_next: Callable):
     Logs: method, path, status code, processing time
     """
     start_time = time.time()
-    
+
     # Process request
     response = await call_next(request)
-    
+
     # Calculate processing time
     process_time = (time.time() - start_time) * 1000
-    
+
     # Log request (metadata only, no user data)
     request_logger = logging.getLogger(__name__)
     request_logger.info(
@@ -196,10 +196,10 @@ async def log_requests(request: Request, call_next: Callable):
         f"Status: {response.status_code} - "
         f"Time: {process_time:.2f}ms"
     )
-    
+
     # Add timing header
     response.headers["X-Process-Time"] = f"{process_time:.2f}ms"
-    
+
     return response
 
 
@@ -217,7 +217,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             status_code=exc.status_code,
             content=exc.detail
         )
-    
+
     # Otherwise, wrap string detail in standard format
     return JSONResponse(
         status_code=exc.status_code,
@@ -242,7 +242,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "message": error["msg"],
             "type": error["type"]
         })
-    
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -286,7 +286,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         f"{type(exc).__name__}",
         exc_info=True
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -321,7 +321,7 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

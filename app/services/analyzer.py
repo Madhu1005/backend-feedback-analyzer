@@ -13,14 +13,13 @@ Integration: Combines sanitizer, prompt_templates, and llm_client
 Version: 1.0.0
 """
 import logging
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any
 
-from app.core.sanitizer import InputSanitizer, ThreatLevel
-from app.core.prompt_templates import PromptBuilder, PromptContext
 from app.core.llm_client import GeminiClient, create_gemini_client
-from app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
-
+from app.core.prompt_templates import PromptBuilder, PromptContext
+from app.core.sanitizer import InputSanitizer, ThreatLevel
+from app.schemas.analysis import AnalyzeRequest
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class AnalysisResult:
         llm_used: Whether LLM was called (vs fallback)
         processing_time_ms: Total processing time in milliseconds
     """
-    analysis: Dict[str, Any]
+    analysis: dict[str, Any]
     sanitization_applied: bool
     threat_level: str
     llm_used: bool
@@ -55,11 +54,11 @@ class MessageAnalyzer:
     4. Response validation (Pydantic)
     5. Result normalization
     """
-    
+
     def __init__(
         self,
-        gemini_client: Optional[GeminiClient] = None,
-        sanitizer: Optional[InputSanitizer] = None
+        gemini_client: GeminiClient | None = None,
+        sanitizer: InputSanitizer | None = None
     ):
         """
         Initialize analyzer with optional dependency injection.
@@ -70,9 +69,9 @@ class MessageAnalyzer:
         """
         self.llm_client = gemini_client or create_gemini_client()
         self.sanitizer = sanitizer or InputSanitizer()
-        
+
         logger.info("MessageAnalyzer initialized")
-    
+
     def analyze(
         self,
         request: AnalyzeRequest,
@@ -99,27 +98,27 @@ class MessageAnalyzer:
         """
         import time
         start_time = time.time()
-        
+
         # Step 1: Sanitize input
         logger.info(f"Analyzing message: length={len(request.message)} chars")
-        
+
         sanitization_result = self.sanitizer.sanitize(
             request.message,
             html_escape=False,  # LLM doesn't need HTML escaping
             redact_pii=True,    # Protect user privacy
             strict=False        # Allow normal code mentions in workplace context
         )
-        
+
         sanitized_message = sanitization_result.sanitized_text
         threat_level = sanitization_result.threat_level
-        
+
         # Log sanitization results
         if sanitization_result.detected_threats:
             logger.warning(
                 f"Threats detected: {sanitization_result.detected_threats}, "
                 f"level={threat_level}"
             )
-        
+
         # Optional: Block critical threats
         if threat_level == ThreatLevel.CRITICAL:
             logger.error("Critical threat detected, blocking analysis")
@@ -128,7 +127,7 @@ class MessageAnalyzer:
                 threat_level=threat_level,
                 processing_time_ms=(time.time() - start_time) * 1000
             )
-        
+
         # Step 2: Build prompt context
         context = PromptContext(
             message=sanitized_message,
@@ -138,7 +137,7 @@ class MessageAnalyzer:
                 **(request.context or {})
             } if request.channel_id or request.context else None
         )
-        
+
         # Step 3: Build prompt with schema and examples
         messages = PromptBuilder.build_analysis_prompt(
             context,
@@ -146,47 +145,47 @@ class MessageAnalyzer:
             include_examples=include_examples,
             max_examples=max_examples
         )
-        
+
         logger.info(
             f"Built prompt: messages={len(messages)}, "
             f"examples={max_examples if include_examples else 0}"
         )
-        
+
         # Step 4: Call LLM
         try:
             analysis_dict = self.llm_client.analyze(
                 messages,
                 fallback_on_error=fallback_on_error
             )
-            
+
             llm_used = not analysis_dict.get("model_debug", {}).get("fallback_used", False)
-            
+
             # Add metadata to model_debug
             if "model_debug" not in analysis_dict:
                 analysis_dict["model_debug"] = {}
-            
+
             analysis_dict["model_debug"]["sanitization_applied"] = bool(
                 sanitization_result.modifications_made
             )
             analysis_dict["model_debug"]["threat_level"] = threat_level.value
-            
+
             logger.info(
                 f"Analysis complete: llm_used={llm_used}, "
                 f"sentiment={analysis_dict.get('sentiment')}"
             )
-            
+
         except Exception as e:
             logger.error(f"Analysis pipeline failed: {str(e)}")
-            
+
             if fallback_on_error:
                 analysis_dict = self._generate_safe_fallback()
                 llm_used = False
             else:
                 raise
-        
+
         # Step 5: Calculate processing time
         processing_time_ms = (time.time() - start_time) * 1000
-        
+
         # Step 6: Return result
         return AnalysisResult(
             analysis=analysis_dict,
@@ -195,7 +194,7 @@ class MessageAnalyzer:
             llm_used=llm_used,
             processing_time_ms=processing_time_ms
         )
-    
+
     def _create_blocked_result(
         self,
         threat_level: ThreatLevel,
@@ -232,7 +231,7 @@ class MessageAnalyzer:
                 "blocked": True
             }
         }
-        
+
         return AnalysisResult(
             analysis=blocked_analysis,
             sanitization_applied=True,
@@ -240,8 +239,8 @@ class MessageAnalyzer:
             llm_used=False,
             processing_time_ms=processing_time_ms
         )
-    
-    def _generate_safe_fallback(self) -> Dict[str, Any]:
+
+    def _generate_safe_fallback(self) -> dict[str, Any]:
         """
         Generate safe fallback when both LLM and sanitizer fail.
         
@@ -269,7 +268,7 @@ class MessageAnalyzer:
                 "reason": "Pipeline failure"
             }
         }
-    
+
     def analyze_batch(
         self,
         requests: list[AnalyzeRequest],
@@ -286,16 +285,16 @@ class MessageAnalyzer:
             List of AnalysisResult objects (same order as input)
         """
         results = []
-        
+
         for i, request in enumerate(requests):
             logger.info(f"Processing batch item {i+1}/{len(requests)}")
-            
+
             try:
                 result = self.analyze(request, **kwargs)
                 results.append(result)
             except Exception as e:
                 logger.error(f"Batch item {i+1} failed: {str(e)}")
-                
+
                 # Add error result
                 error_result = AnalysisResult(
                     analysis=self._generate_safe_fallback(),
@@ -305,15 +304,15 @@ class MessageAnalyzer:
                     processing_time_ms=0.0
                 )
                 results.append(error_result)
-        
+
         logger.info(f"Batch processing complete: {len(results)}/{len(requests)} successful")
         return results
 
 
 # Factory function for easy instantiation
 def create_analyzer(
-    api_key: Optional[str] = None,
-    model_name: Optional[str] = None
+    api_key: str | None = None,
+    model_name: str | None = None
 ) -> MessageAnalyzer:
     """
     Create configured MessageAnalyzer instance.

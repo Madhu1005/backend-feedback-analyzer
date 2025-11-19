@@ -5,16 +5,11 @@ Implements strict validation and JSON schema export for LLM function-calling.
 Security: All fields validated, model_debug sanitized, immutable models.
 Version: 1.0.0
 """
-from typing import Dict, List, Optional, Any
-from pydantic import (
-    BaseModel, 
-    Field, 
-    field_validator, 
-    model_validator,
-    ConfigDict
-)
-from enum import Enum
 import re
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SentimentEnum(str, Enum):
@@ -56,28 +51,28 @@ class CategoryEnum(str, Enum):
 class ConfidenceScores(BaseModel):
     """Confidence scores for each classification"""
     model_config = ConfigDict(extra='forbid', frozen=True)
-    
+
     sentiment: float = Field(
-        ..., 
-        ge=0.0, 
+        ...,
+        ge=0.0,
         le=1.0,
         description="Confidence in sentiment classification"
     )
     emotion: float = Field(
-        ..., 
-        ge=0.0, 
+        ...,
+        ge=0.0,
         le=1.0,
         description="Confidence in emotion detection"
     )
     category: float = Field(
-        ..., 
-        ge=0.0, 
+        ...,
+        ge=0.0,
         le=1.0,
         description="Confidence in category classification"
     )
     stress: float = Field(
-        ..., 
-        ge=0.0, 
+        ...,
+        ge=0.0,
         le=1.0,
         description="Confidence in stress score"
     )
@@ -86,30 +81,30 @@ class ConfidenceScores(BaseModel):
 class AnalyzeRequest(BaseModel):
     """Request schema for message analysis endpoint"""
     model_config = ConfigDict(extra='forbid', frozen=True)
-    
+
     message: str = Field(
-        ..., 
-        min_length=1, 
+        ...,
+        min_length=1,
         max_length=5000,
         description="The message text to analyze"
     )
-    user_id: Optional[str] = Field(
+    user_id: str | None = Field(
         default=None,
         min_length=1,
         max_length=100,
         description="ID of the user who sent the message"
     )
-    channel_id: Optional[str] = Field(
+    channel_id: str | None = Field(
         default=None,
         min_length=1,
         max_length=100,
         description="ID of the channel where message was sent"
     )
-    context: Optional[Dict[str, str]] = Field(
+    context: dict[str, str] | None = Field(
         default=None,
         description="Optional contextual information"
     )
-    
+
     @field_validator('message')
     @classmethod
     def message_not_empty(cls, v: str) -> str:
@@ -124,7 +119,7 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     """Response schema for message analysis"""
     model_config = ConfigDict(extra='forbid', frozen=True)
-    
+
     sentiment: SentimentEnum = Field(
         ...,
         description="Overall sentiment of the message"
@@ -143,17 +138,17 @@ class AnalyzeResponse(BaseModel):
         ...,
         description="Message category classification"
     )
-    key_phrases: List[str] = Field(
+    key_phrases: list[str] = Field(
         default_factory=list,
         max_length=10,
         description="Important phrases extracted from message"
     )
-    suggested_reply: Optional[str] = Field(
+    suggested_reply: str | None = Field(
         default=None,
         max_length=1000,
         description="AI-suggested reply for manager/team lead"
     )
-    action_items: List[str] = Field(
+    action_items: list[str] = Field(
         default_factory=list,
         max_length=5,
         description="Recommended action items"
@@ -166,7 +161,7 @@ class AnalyzeResponse(BaseModel):
         default=False,
         description="Whether message requires immediate attention"
     )
-    model_debug: Optional[Dict[str, Any]] = Field(
+    model_debug: dict[str, Any] | None = Field(
         default=None,
         description="Debug info: model, tokens, latency, fallback_used"
     )
@@ -174,10 +169,10 @@ class AnalyzeResponse(BaseModel):
         default="1.0.0",
         description="Schema version for compatibility tracking"
     )
-    
+
     @field_validator('key_phrases', 'action_items')
     @classmethod
-    def validate_list_items(cls, v: List[str]) -> List[str]:
+    def validate_list_items(cls, v: list[str]) -> list[str]:
         """Ensure list items are not empty and enforce max length"""
         MAX_ITEM_LENGTH = 200
         filtered = []
@@ -191,28 +186,28 @@ class AnalyzeResponse(BaseModel):
                     )
                 filtered.append(stripped)
         return filtered
-    
+
     @field_validator('model_debug', mode='before')
     @classmethod
     def sanitize_model_debug(
-        cls, 
-        v: Optional[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+        cls,
+        v: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
         """Sanitize model_debug to prevent log injection and PII leaks"""
         if not v:
             return v
-        
+
         sanitized = {}
         SAFE_KEYS = {
             "model", "tokens", "tokens_used", "latency_ms",
             "provider", "fallback_used", "temperature"
         }
-        
+
         for key, value in v.items():
             # Only allow safe keys
             if key not in SAFE_KEYS:
                 continue
-            
+
             # Sanitize string values: remove newlines, limit length
             if isinstance(value, str):
                 sanitized_val = (
@@ -227,24 +222,24 @@ class AnalyzeResponse(BaseModel):
             else:
                 # Convert other types to string and sanitize
                 sanitized[key] = str(value)[:50]
-        
+
         return sanitized if sanitized else None
-    
+
     @model_validator(mode='before')
     @classmethod
-    def validate_attention_flag(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_attention_flag(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Set urgency based on stress score and emotion before freezing"""
         if isinstance(values, dict):
             stress_score = values.get('stress_score', 0)
             emotion = values.get('emotion')
             urgency = values.get('urgency', False)
-            
+
             high_stress = stress_score >= 8
             critical_emotion = emotion in ['anger', 'fear']
-            
+
             if (high_stress or critical_emotion) and not urgency:
                 values['urgency'] = True
-        
+
         return values
 
 
@@ -268,7 +263,7 @@ def _remove_titles_recursive(obj: Any) -> Any:
     return obj
 
 
-def get_clean_schema() -> Dict[str, Any]:
+def get_clean_schema() -> dict[str, Any]:
     """Get JSON schema without title fields for cleaner LLM prompts.
     
     Returns:

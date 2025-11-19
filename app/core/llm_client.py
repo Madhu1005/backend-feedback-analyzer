@@ -12,28 +12,28 @@ Responsibilities:
 Provider: Gemini ONLY (gemini-2.0-pro or gemini-2.0-flash)
 Version: 1.0.0
 """
-import os
 import json
 import logging
-import time
+import os
 import re
 import socket
-from typing import Optional, Dict, Any, List
+import time
 from dataclasses import dataclass
-from requests.exceptions import Timeout as RequestsTimeout, ConnectionError as RequestsConnectionError
+from typing import Any
+
 import google.generativeai as genai
-from google.generativeai.types import GenerationConfig, HarmCategory, HarmBlockThreshold
+from google.generativeai.types import GenerationConfig, HarmBlockThreshold, HarmCategory
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout as RequestsTimeout
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log
 )
 
-from app.schemas.analysis import AnalyzeResponse, get_clean_schema
-from app.core.prompt_templates import PromptBuilder
-
+from app.schemas.analysis import AnalyzeResponse
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class GeminiClient:
     - Code fence stripping
     - Pydantic validation integration
     """
-    
+
     def __init__(self, config: LLMConfig):
         """
         Initialize Gemini client.
@@ -80,10 +80,10 @@ class GeminiClient:
             config: LLM configuration with API key and parameters
         """
         self.config = config
-        
+
         # Configure Gemini API
         genai.configure(api_key=config.api_key)
-        
+
         # Initialize model
         self.model = genai.GenerativeModel(
             model_name=config.model_name,
@@ -100,12 +100,12 @@ class GeminiClient:
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             }
         )
-        
+
         logger.info(
             f"Initialized Gemini client: model={config.model_name}, "
             f"temp={config.temperature}, max_tokens={config.max_tokens}"
         )
-    
+
     def _extract_text_from_response(self, response) -> str:
         """
         Robustly extract generated text from Gemini response.
@@ -126,7 +126,7 @@ class GeminiClient:
             text = response.text
             if isinstance(text, str) and text.strip():
                 return text.strip()
-        
+
         # 2) response.candidates -> candidate.output or candidate.text
         # Check if candidates exist and are not empty
         if hasattr(response, "candidates") and response.candidates:
@@ -148,7 +148,7 @@ class GeminiClient:
                             return cand[key].strip()
             except Exception:
                 pass
-        
+
         # 3) response.output_text or response.output
         for attr in ("output_text", "output", "content"):
             if hasattr(response, attr):
@@ -157,9 +157,9 @@ class GeminiClient:
                     val = val.strip()
                     if val:
                         return val
-        
+
         raise ValueError("Unable to extract text from Gemini response object")
-    
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -167,7 +167,7 @@ class GeminiClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True
     )
-    def _make_api_call(self, messages: List[Dict[str, str]]) -> str:
+    def _make_api_call(self, messages: list[dict[str, str]]) -> str:
         """
         Make API call to Gemini with retry logic.
         
@@ -187,16 +187,16 @@ class GeminiClient:
             for msg in messages:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
-                
+
                 if role == "system":
                     prompt_parts.append(f"SYSTEM INSTRUCTIONS:\n{content}\n")
                 elif role == "user":
                     prompt_parts.append(f"USER:\n{content}\n")
                 elif role == "assistant":
                     prompt_parts.append(f"ASSISTANT:\n{content}\n")
-            
+
             full_prompt = "\n".join(prompt_parts)
-            
+
             # Make API call with timeout
             start_time = time.time()
             response = self.model.generate_content(
@@ -204,32 +204,32 @@ class GeminiClient:
                 request_options={"timeout": self.config.timeout_seconds}
             )
             elapsed = time.time() - start_time
-            
+
             # Log success
             logger.info(
                 f"Gemini API call successful: "
                 f"latency={elapsed:.2f}s, "
                 f"model={self.config.model_name}"
             )
-            
+
             # Extract text from response (handles multiple SDK shapes)
             try:
                 text = self._extract_text_from_response(response)
             except Exception as e:
                 logger.error("Failed to extract text from Gemini response: %s", type(e).__name__)
                 raise
-            
+
             if not text:
                 raise ValueError("Gemini returned empty response text")
-            
+
             return text
-            
+
         except Exception as e:
             logger.error(
                 "Gemini API call failed: %s (no user content logged)", type(e).__name__
             )
             raise
-    
+
     def _strip_code_fences(self, text: str) -> str:
         """
         Strip markdown code fences from response.
@@ -244,24 +244,24 @@ class GeminiClient:
             Cleaned text without code fences
         """
         text = text.strip()
-        
+
         # Remove ```json ... ```
         if text.startswith("```json"):
             text = text[7:]  # Remove ```json
             if text.endswith("```"):
                 text = text[:-3]  # Remove ```
             text = text.strip()
-        
+
         # Remove ``` ... ```
         elif text.startswith("```"):
             text = text[3:]  # Remove ```
             if text.endswith("```"):
                 text = text[:-3]  # Remove ```
             text = text.strip()
-        
+
         return text
-    
-    def _validate_json_structure(self, data: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _validate_json_structure(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Validate response against Pydantic schema.
         
@@ -277,18 +277,18 @@ class GeminiClient:
         try:
             # Validate using Pydantic model
             response = AnalyzeResponse(**data)
-            
+
             # Convert back to dict (ensures all transformations applied)
             validated_dict = response.model_dump()
-            
+
             logger.info("Response validation successful")
             return validated_dict
-            
+
         except Exception as e:
             logger.error(f"Response validation failed: {str(e)}")
-            raise ValueError(f"Invalid response structure: {str(e)}")
-    
-    def _attempt_json_repair(self, text: str) -> Optional[Dict[str, Any]]:
+            raise ValueError(f"Invalid response structure: {str(e)}") from e
+
+    def _attempt_json_repair(self, text: str) -> dict[str, Any] | None:
         """
         Attempt to repair malformed JSON safely.
         
@@ -309,7 +309,7 @@ class GeminiClient:
         t = text.strip()
         t = re.sub(r'^```(?:json)?\s*', '', t, flags=re.IGNORECASE)
         t = re.sub(r'\s*```$', '', t)
-        
+
         # Extract the first {...} block if there is one
         start = t.find('{')
         end = t.rfind('}')
@@ -317,11 +317,11 @@ class GeminiClient:
             logger.warning("No valid JSON object structure found")
             return None
         body = t[start:end+1]
-        
+
         # Remove trailing commas just before } or ] (safer regex)
         # Matches comma followed by whitespace and closing bracket
         body = re.sub(r',\s*(?=[}\]])', '', body)
-        
+
         # Try incremental repairs: try parse; if fails, attempt small fixes
         try:
             return json.loads(body)
@@ -337,16 +337,16 @@ class GeminiClient:
                     return parsed
                 except json.JSONDecodeError:
                     pass
-        
+
         logger.warning("All JSON repair attempts failed")
         return None
-    
+
     def analyze(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
         fallback_on_error: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze message using Gemini API.
         
@@ -363,34 +363,34 @@ class GeminiClient:
         """
         start_time = time.time()
         error_type = None
-        
+
         try:
             # Make API call with retries
             raw_response = self._make_api_call(messages)
-            
+
             # Strip code fences if present
             cleaned_response = self._strip_code_fences(raw_response)
-            
+
             # Parse JSON
             try:
                 parsed_data = json.loads(cleaned_response)
             except json.JSONDecodeError as e:
                 logger.warning("JSON parse failed, attempting repair (no content logged)")
                 error_type = "json_parse_error"
-                
+
                 # Attempt repair
                 parsed_data = self._attempt_json_repair(cleaned_response)
-                
+
                 if parsed_data is None:
                     if fallback_on_error:
                         logger.error("JSON repair failed, using fallback")
                         return self._generate_fallback_response(error_type=error_type)
                     else:
-                        raise ValueError(f"Invalid JSON response: {type(e).__name__}")
-            
+                        raise ValueError(f"Invalid JSON response: {type(e).__name__}") from e
+
             # Validate against schema
             validated_data = self._validate_json_structure(parsed_data)
-            
+
             # Add debug metadata (safe: no user content)
             elapsed_ms = (time.time() - start_time) * 1000
             # Ensure model_debug exists and is a dict
@@ -401,20 +401,20 @@ class GeminiClient:
                 "latency_ms": round(elapsed_ms, 2),
                 "fallback_used": False
             })
-            
+
             return validated_data
-            
+
         except Exception as e:
             error_type = type(e).__name__
             logger.warning("LLM call failed: %s (use fallback=%s)", error_type, fallback_on_error)
-            
+
             if fallback_on_error:
                 logger.info("Using fallback response due to error")
                 return self._generate_fallback_response(error_type=error_type)
             else:
-                raise RuntimeError(f"LLM analysis failed: {error_type}")
-    
-    def _generate_fallback_response(self, error_type: Optional[str] = None) -> Dict[str, Any]:
+                raise RuntimeError(f"LLM analysis failed: {error_type}") from e
+
+    def _generate_fallback_response(self, error_type: str | None = None) -> dict[str, Any]:
         """
         Generate safe fallback response when LLM fails.
         
@@ -447,14 +447,14 @@ class GeminiClient:
                 "error_type": error_type
             }
         }
-        
+
         logger.info("Generated fallback response (error_type=%s)", error_type)
         return fallback
 
 
 def create_gemini_client(
-    api_key: Optional[str] = None,
-    model_name: Optional[str] = None,
+    api_key: str | None = None,
+    model_name: str | None = None,
     **kwargs
 ) -> GeminiClient:
     """
@@ -479,16 +479,16 @@ def create_gemini_client(
                 "GEMINI_API_KEY not found in environment. "
                 "Set it or pass api_key parameter."
             )
-    
+
     # Use default model if not specified
     if model_name is None:
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
-    
+
     # Create config
     config = LLMConfig(
         api_key=api_key,
         model_name=model_name,
         **kwargs
     )
-    
+
     return GeminiClient(config)
