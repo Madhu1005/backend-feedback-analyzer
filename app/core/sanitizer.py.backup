@@ -1,0 +1,396 @@
+"""
+Input sanitization and prompt-injection detection.
+
+Protects against:
+- Prompt injection attacks
+- Code injection attempts
+- PII leakage
+- Malicious payloads
+
+Security: All inputs sanitized before LLM processing.
+Version: 1.0.0
+"""
+import re
+from typing import Optional, Dict, Any, List, Tuple
+from dataclasses import dataclass
+import html
+
+
+@dataclass(frozen=True)
+class SanitizationResult:
+    """Result of input sanitization"""
+    sanitized_text: str
+    is_safe: bool
+    threat_level: str  # "none", "low", "medium", "high"
+    detected_threats: List[str]
+    modifications_made: List[str]
+
+
+class InputSanitizer:
+    """
+    Sanitizes user inputs to prevent prompt injection and other attacks.
+    
+    Thread-safe, stateless operation.
+    """
+    
+    # Prompt injection patterns (case-insensitive)
+    INJECTION_PATTERNS = [
+        r'ignore\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
+        r'disregard\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
+        r'forget\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
+        r'system\s*:\s*you\s+are',
+        r'new\s+instructions?:',
+        r'override\s+instructions?',
+        r'act\s+as\s+(a\s+)?(jailbreak|dan|evil)',
+        r'you\s+are\s+now\s+(a\s+)?',
+        r'pretend\s+(you\s+are|to\s+be)',
+        r'<\|im_start\|>',
+        r'<\|im_end\|>',
+        r'###\s*instruction',
+        r'prompt\s*:\s*',
+        r'replace\s+your\s+instructions',
+    ]
+    
+    # Code execution patterns
+    CODE_PATTERNS = [
+        r'```[\w]*',  # Code blocks (opening)
+        r'```',       # Code blocks (closing backticks)
+        r'`[^`]+`',   # Inline code (less aggressive)
+        r'<script[^>]*>',
+        r'javascript:',
+        r'data:text/html',
+        r'onerror\s*=',
+        r'onclick\s*=',
+    ]
+    
+    # Excessive repetition (potential DOS)
+    MAX_CHAR_REPETITION = 50
+    MAX_WORD_REPETITION = 10
+    
+    # Length limits
+    MAX_INPUT_LENGTH = 5000
+    MAX_LINE_LENGTH = 500
+    
+    @classmethod
+    def sanitize(
+        cls,
+        text: str,
+        strict: bool = True,
+        preserve_formatting: bool = False
+    ) -> SanitizationResult:
+        """
+        Sanitize input text for safe LLM processing.
+        
+        Args:
+            text: Input text to sanitize
+            strict: If True, be more aggressive with sanitization
+            preserve_formatting: Keep newlines and basic formatting
+            
+        Returns:
+            SanitizationResult with sanitized text and threat info
+        """
+        if not text or not isinstance(text, str):
+            return SanitizationResult(
+                sanitized_text="",
+                is_safe=True,
+                threat_level="none",
+                detected_threats=[],
+                modifications_made=[]
+            )
+        
+        original_text = text
+        detected_threats = []
+        modifications = []
+        threat_level = "none"
+        
+        # 1. Length check
+        if len(text) > cls.MAX_INPUT_LENGTH:
+            text = text[:cls.MAX_INPUT_LENGTH]
+            modifications.append(f"Truncated to {cls.MAX_INPUT_LENGTH} chars")
+            threat_level = cls._escalate_threat(threat_level, "low")
+        
+        # 2. Check for prompt injection attempts
+        injection_found, text = cls._detect_and_remove_injections(text)
+        if injection_found:
+            detected_threats.append("prompt_injection")
+            modifications.append("Removed prompt injection attempts")
+            threat_level = cls._escalate_threat(threat_level, "high")
+        
+        # 3. Remove code blocks and potential XSS
+        if strict:
+            code_found, text = cls._remove_code_patterns(text)
+            if code_found:
+                detected_threats.append("code_injection")
+                modifications.append("Removed code blocks")
+                threat_level = cls._escalate_threat(threat_level, "medium")
+        
+        # 4. HTML escape (but preserve basic chars)
+        text = cls._safe_html_escape(text)
+        
+        # 5. Normalize whitespace
+        if not preserve_formatting:
+            text = cls._normalize_whitespace(text)
+            if text != original_text:
+                modifications.append("Normalized whitespace")
+        
+        # 6. Remove excessive repetition
+        repetition_found, text = cls._remove_excessive_repetition(text)
+        if repetition_found:
+            detected_threats.append("excessive_repetition")
+            modifications.append("Removed excessive repetition")
+            threat_level = cls._escalate_threat(threat_level, "low")
+        
+        # 7. Check line length (after repetition removal)
+        original_len = len(text)
+        text = cls._enforce_line_length(text)
+        if len(text) < original_len:
+            modifications.append("Truncated long lines")
+        
+        # 8. Remove null bytes and control chars
+        text = cls._remove_control_chars(text)
+        
+        # 9. Strip and final cleanup
+        text = text.strip()
+        
+        # Escalate to high if multiple serious threats detected
+        if len(detected_threats) >= 2:
+            for threat in detected_threats:
+                if threat in ["prompt_injection", "code_injection"]:
+                    threat_level = "high"
+                    break
+        
+        is_safe = threat_level in ["none", "low"]
+        
+        return SanitizationResult(
+            sanitized_text=text,
+            is_safe=is_safe,
+            threat_level=threat_level,
+            detected_threats=detected_threats,
+            modifications_made=modifications
+        )
+    
+    @classmethod
+    def _detect_and_remove_injections(
+        cls, 
+        text: str
+    ) -> Tuple[bool, str]:
+        """
+        Detect and remove prompt injection attempts.
+        
+        Returns:
+            (found, sanitized_text)
+        """
+        found = False
+        original = text
+        
+        for pattern in cls.INJECTION_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
+                found = True
+                # Remove the entire line containing the pattern
+                text = re.sub(
+                    f"^.*{pattern}.*$",
+                    "[REMOVED: Potential security violation]",
+                    text,
+                    flags=re.IGNORECASE | re.MULTILINE
+                )
+        
+        return found, text
+    
+    @classmethod
+    def _remove_code_patterns(cls, text: str) -> Tuple[bool, str]:
+        """Remove code blocks and execution patterns."""
+        found = False
+        
+        for pattern in cls.CODE_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                found = True
+                text = re.sub(
+                    pattern,
+                    "[code removed]",
+                    text,
+                    flags=re.IGNORECASE
+                )
+        
+        return found, text
+    
+    @classmethod
+    def _safe_html_escape(cls, text: str) -> str:
+        """
+        Escape HTML but preserve readability.
+        Only escape truly dangerous characters.
+        """
+        # Escape < > to prevent tag injection
+        text = text.replace("<", "&lt;").replace(">", "&gt;")
+        return text
+    
+    @classmethod
+    def _normalize_whitespace(cls, text: str) -> str:
+        """Normalize whitespace to single spaces."""
+        # Replace multiple spaces with single space
+        text = re.sub(r' {2,}', ' ', text)
+        # Replace multiple newlines with max 2
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        # Remove trailing whitespace per line
+        text = '\n'.join(line.rstrip() for line in text.split('\n'))
+        return text
+    
+    @classmethod
+    def _remove_excessive_repetition(
+        cls, 
+        text: str
+    ) -> Tuple[bool, str]:
+        """Remove excessive character and word repetition."""
+        found = False
+        
+        # Character repetition (e.g., "aaaaaaa...")
+        pattern = r'(.)\1{' + str(cls.MAX_CHAR_REPETITION) + r',}'
+        if re.search(pattern, text):
+            found = True
+            text = re.sub(
+                pattern,
+                r'\1' * cls.MAX_CHAR_REPETITION,
+                text
+            )
+        
+        # Word repetition (e.g., "test test test test...")
+        words = text.split()
+        if len(words) > cls.MAX_WORD_REPETITION:
+            cleaned_words = []
+            prev_word = None
+            repeat_count = 0
+            
+            for word in words:
+                if word.lower() == prev_word:
+                    repeat_count += 1
+                    if repeat_count < cls.MAX_WORD_REPETITION:
+                        cleaned_words.append(word)
+                    else:
+                        found = True
+                else:
+                    repeat_count = 0
+                    cleaned_words.append(word)
+                    prev_word = word.lower()
+            
+            text = ' '.join(cleaned_words)
+        
+        return found, text
+    
+    @classmethod
+    def _enforce_line_length(cls, text: str) -> str:
+        """Enforce maximum line length."""
+        lines = text.split('\n')
+        truncated_lines = []
+        
+        for line in lines:
+            if len(line) > cls.MAX_LINE_LENGTH:
+                truncated_lines.append(line[:cls.MAX_LINE_LENGTH] + "...")
+            else:
+                truncated_lines.append(line)
+        
+        return '\n'.join(truncated_lines)
+    
+    @classmethod
+    def _remove_control_chars(cls, text: str) -> str:
+        """Remove null bytes and control characters."""
+        # Remove null bytes
+        text = text.replace('\x00', '')
+        # Remove other control chars except tab, newline, carriage return
+        text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+        return text
+    
+    @classmethod
+    def _escalate_threat(cls, current: str, new: str) -> str:
+        """Escalate threat level to higher severity."""
+        levels = {"none": 0, "low": 1, "medium": 2, "high": 3}
+        current_val = levels.get(current, 0)
+        new_val = levels.get(new, 0)
+        
+        if new_val > current_val:
+            return new
+        return current
+    
+    @classmethod
+    def is_safe_for_logging(cls, text: str) -> bool:
+        """
+        Check if text is safe to log (no PII patterns).
+        
+        Args:
+            text: Text to check
+            
+        Returns:
+            True if safe to log, False if potential PII detected
+        """
+        if not text:
+            return True
+        
+        # Email pattern
+        if re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text):
+            return False
+        
+        # Phone number patterns
+        phone_patterns = [
+            r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',  # US format
+            r'\b\+\d{1,3}[-.]?\d{3,14}\b',     # International
+        ]
+        for pattern in phone_patterns:
+            if re.search(pattern, text):
+                return False
+        
+        # Credit card pattern (simple check)
+        if re.search(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b', text):
+            return False
+        
+        # SSN pattern
+        if re.search(r'\b\d{3}-\d{2}-\d{4}\b', text):
+            return False
+        
+        return True
+    
+    @classmethod
+    def redact_pii(cls, text: str) -> str:
+        """
+        Redact PII from text for safe logging.
+        
+        Args:
+            text: Text to redact
+            
+        Returns:
+            Text with PII redacted
+        """
+        if not text:
+            return text
+        
+        # Email
+        text = re.sub(
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            '[EMAIL_REDACTED]',
+            text
+        )
+        
+        # Phone numbers
+        text = re.sub(
+            r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
+            '[PHONE_REDACTED]',
+            text
+        )
+        text = re.sub(
+            r'\b\+\d{1,3}[-.]?\d{3,14}\b',
+            '[PHONE_REDACTED]',
+            text
+        )
+        
+        # Credit card
+        text = re.sub(
+            r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b',
+            '[CARD_REDACTED]',
+            text
+        )
+        
+        # SSN
+        text = re.sub(
+            r'\b\d{3}-\d{2}-\d{4}\b',
+            '[SSN_REDACTED]',
+            text
+        )
+        
+        return text

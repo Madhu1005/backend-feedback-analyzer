@@ -1,0 +1,63 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black mypy types-redis
+
+    - name: Run Ruff (linter)
+      run: |
+        ruff check app/ --output-format=github
+
+    - name: Run Black (formatter check)
+      run: |
+        black --check app/
+
+    - name: Run Mypy (type checker)
+      run: |
+        mypy app/ --ignore-missing-imports --no-strict-optional
+
+  complexity:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install analysis tools
+      run: |
+        pip install radon
+
+    - name: Check code complexity
+      run: |
+        radon cc app/ -a -nb
+        radon mi app/ -nb
+
+    - name: Check maintainability
+      run: |
+        radon mi app/ -s -n B || echo "Warning: Some files have low maintainability"

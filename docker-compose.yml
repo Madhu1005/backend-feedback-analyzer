@@ -1,0 +1,96 @@
+# Docker Compose configuration for local development
+# Includes Redis for rate limiting and environment setup
+
+services:
+  # Redis for rate limiting (required for multiple workers)
+  redis:
+    image: redis:7-alpine
+    container_name: feedback-analyzer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feedback-analyzer-network
+
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: feedback-analyzer-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Application
+      - ENVIRONMENT=development
+      - DEBUG=true
+      
+      # Gemini API (set your key here or in .env)
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-2.0-flash-exp
+      
+      # Rate Limiting (use Redis for multi-worker support)
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PER_MINUTE=60
+      - RATE_LIMIT_STORAGE=redis://redis:6379/0
+      
+      # CORS (allow all for development)
+      - CORS_ENABLED=true
+      - CORS_ORIGINS=["*"]
+      
+      # Logging
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      # Mount source code for hot reload (development only)
+      - ./app:/app/app:ro
+    networks:
+      - feedback-analyzer-network
+    restart: unless-stopped
+
+  # Optional: Production-like setup with multiple workers
+  api-production:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: feedback-analyzer-api-prod
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - RATE_LIMIT_STORAGE=redis://redis:6379/1
+      - CORS_ORIGINS=["https://app.example.com"]
+      - LOG_LEVEL=WARNING
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - feedback-analyzer-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  feedback-analyzer-network:
+    driver: bridge
