@@ -177,7 +177,7 @@ class AnalyzeResponse(BaseModel):
                 sanitized_val = re.sub(r"[`{}\\\[\]]", "", sanitized_val)
                 sanitized[key] = sanitized_val[:100]  # Limit length
             elif isinstance(value, (int, float, bool)):
-                sanitized[key] = str(value)  # Convert to string for consistent type
+                sanitized[key] = value  # Preserve native types for numbers and bools
             else:
                 # Convert other types to string and sanitize
                 sanitized[key] = str(value)[:50]
