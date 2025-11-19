@@ -12,6 +12,7 @@ Production-grade multi-layer security with:
 Security: All inputs sanitized before LLM processing.
 Version: 2.0.0
 """
+
 import html
 import logging
 import re
@@ -25,23 +26,23 @@ logger = logging.getLogger(__name__)
 
 # Confusable homoglyph mapping (prevents visual obfuscation attacks)
 _CONFUSABLES = {
-    '\u043E': 'o',  # Cyrillic small o
-    '\u0456': 'i',  # Cyrillic small byelorussian-ukrainian i
-    '\u03BF': 'o',  # Greek small omicron
-    '\u0131': 'i',  # Latin small dotless i
-    '\u0430': 'a',  # Cyrillic small a
-    '\u0435': 'e',  # Cyrillic small e
-    '\u0441': 'c',  # Cyrillic small es
-    '\u0440': 'p',  # Cyrillic small er
-    '\u0445': 'x',  # Cyrillic small ha
-    '\u0443': 'y',  # Cyrillic small u
-    '\u04BB': 'h',  # Cyrillic small shha
-    '\u0455': 's',  # Cyrillic small dze
-    '\u0458': 'j',  # Cyrillic small je
-    '\u03B1': 'a',  # Greek small alpha
-    '\u03B5': 'e',  # Greek small epsilon
-    '\u03B9': 'i',  # Greek small iota
-    '\u03C1': 'p',  # Greek small rho
+    "\u043e": "o",  # Cyrillic small o
+    "\u0456": "i",  # Cyrillic small byelorussian-ukrainian i
+    "\u03bf": "o",  # Greek small omicron
+    "\u0131": "i",  # Latin small dotless i
+    "\u0430": "a",  # Cyrillic small a
+    "\u0435": "e",  # Cyrillic small e
+    "\u0441": "c",  # Cyrillic small es
+    "\u0440": "p",  # Cyrillic small er
+    "\u0445": "x",  # Cyrillic small ha
+    "\u0443": "y",  # Cyrillic small u
+    "\u04bb": "h",  # Cyrillic small shha
+    "\u0455": "s",  # Cyrillic small dze
+    "\u0458": "j",  # Cyrillic small je
+    "\u03b1": "a",  # Greek small alpha
+    "\u03b5": "e",  # Greek small epsilon
+    "\u03b9": "i",  # Greek small iota
+    "\u03c1": "p",  # Greek small rho
 }
 
 
@@ -55,6 +56,7 @@ THREAT_WEIGHTS = {
 
 class ThreatLevel(str, Enum):
     """Threat severity classification"""
+
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
@@ -75,6 +77,7 @@ class SanitizationResult:
         modifications_made: List of transformations applied
         original_length: Length of original input (for audit)
     """
+
     sanitized_text: str
     is_safe: bool
     threat_level: ThreatLevel
@@ -102,41 +105,41 @@ class InputSanitizer:
     # Prompt injection patterns (case-insensitive, whitespace-tolerant)
     # These match AFTER canonicalization (punctuation removed, lowercase)
     INJECTION_PATTERNS = [
-        r'ignore\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
-        r'disregard\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
-        r'forget\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)',
-        r'system\s+you\s+are\s+(?:now|a|an|\w+)',  # Canonicalized: no colon
-        r'(?:im_start|im_end|system|assistant|user)',  # Canonicalized: no brackets
-        r'pretend\s+(?:you\s+are|to\s+be)\s+(?:a|an)',
-        r'act\s+as\s+(?:if|though|a|an)',
-        r'new\s+(?:instructions?|role|task|prompt)\s+',  # Canonicalized: no colon
-        r'override\s+(?:previous|default|system)',
-        r'you\s+must\s+(?:now|always|ignore)',
-        r'from\s+now\s+on\s+you',
-        r'your\s+new\s+(?:role|task|instruction)',
-        r'sudo\s+mode',
-        r'developer\s+mode',
+        r"ignore\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)",
+        r"disregard\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)",
+        r"forget\s+(?:all\s+)?(?:previous|above|prior|all)\s+(?:instructions?|prompts?|commands?)",
+        r"system\s+you\s+are\s+(?:now|a|an|\w+)",  # Canonicalized: no colon
+        r"(?:im_start|im_end|system|assistant|user)",  # Canonicalized: no brackets
+        r"pretend\s+(?:you\s+are|to\s+be)\s+(?:a|an)",
+        r"act\s+as\s+(?:if|though|a|an)",
+        r"new\s+(?:instructions?|role|task|prompt)\s+",  # Canonicalized: no colon
+        r"override\s+(?:previous|default|system)",
+        r"you\s+must\s+(?:now|always|ignore)",
+        r"from\s+now\s+on\s+you",
+        r"your\s+new\s+(?:role|task|instruction)",
+        r"sudo\s+mode",
+        r"developer\s+mode",
     ]
 
     # Code execution patterns
     CODE_PATTERNS = [
-        r'eval\s*\(',
-        r'exec\s*\(',
-        r'__import__\s*\(',
-        r'os\.system\s*\(',
-        r'subprocess\.',
-        r'<script[^>]*>',
-        r'javascript\s*:',
-        r'data\s*:\s*text/html',
-        r'onerror\s*=',
-        r'onclick\s*=',
+        r"eval\s*\(",
+        r"exec\s*\(",
+        r"__import__\s*\(",
+        r"os\.system\s*\(",
+        r"subprocess\.",
+        r"<script[^>]*>",
+        r"javascript\s*:",
+        r"data\s*:\s*text/html",
+        r"onerror\s*=",
+        r"onclick\s*=",
     ]
 
     # PII patterns
-    EMAIL_PATTERN = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    PHONE_PATTERN = r'\b(?:\+?1[-.\s]?)?(?:\([0-9]{3}\)|[0-9]{3})[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b'
-    SSN_PATTERN = r'\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b'
-    CREDIT_CARD_PATTERN = r'\b(?:\d{4}[-\s]?){3}\d{4}\b'
+    EMAIL_PATTERN = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+    PHONE_PATTERN = r"\b(?:\+?1[-.\s]?)?(?:\([0-9]{3}\)|[0-9]{3})[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b"
+    SSN_PATTERN = r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b"
+    CREDIT_CARD_PATTERN = r"\b(?:\d{4}[-\s]?){3}\d{4}\b"
 
     # Limits
     MAX_INPUT_LENGTH = 5000
@@ -156,12 +159,8 @@ class InputSanitizer:
     def _ensure_compiled_regexes(cls) -> None:
         """Lazy compilation of regex patterns."""
         if cls._INJECTION_REGEXES is None:
-            cls._INJECTION_REGEXES = [
-                re.compile(p, re.IGNORECASE) for p in cls.INJECTION_PATTERNS
-            ]
-            cls._CODE_REGEXES = [
-                re.compile(p, re.IGNORECASE) for p in cls.CODE_PATTERNS
-            ]
+            cls._INJECTION_REGEXES = [re.compile(p, re.IGNORECASE) for p in cls.INJECTION_PATTERNS]
+            cls._CODE_REGEXES = [re.compile(p, re.IGNORECASE) for p in cls.CODE_PATTERNS]
             cls._EMAIL_RE = re.compile(cls.EMAIL_PATTERN)
             cls._PHONE_RE = re.compile(cls.PHONE_PATTERN)
             cls._SSN_RE = re.compile(cls.SSN_PATTERN)
@@ -173,7 +172,7 @@ class InputSanitizer:
         Replace common homoglyphs with ASCII equivalents (P0-1 fix).
         Prevents visual obfuscation attacks using lookalike characters.
         """
-        return ''.join(_CONFUSABLES.get(ch, ch) for ch in text)
+        return "".join(_CONFUSABLES.get(ch, ch) for ch in text)
 
     @classmethod
     def _canonicalize_for_matching(cls, text: str) -> str:
@@ -188,16 +187,16 @@ class InputSanitizer:
         5. Lowercase
         """
         # Normalize Unicode
-        txt = unicodedata.normalize('NFC', text)
+        txt = unicodedata.normalize("NFC", text)
 
         # Fold confusables
         txt = cls._fold_confusables(txt)
 
         # Remove punctuation except word boundaries
-        txt = re.sub(r'[^\w\s]', ' ', txt)
+        txt = re.sub(r"[^\w\s]", " ", txt)
 
         # Collapse whitespace and lowercase
-        txt = re.sub(r'\s+', ' ', txt).strip().lower()
+        txt = re.sub(r"\s+", " ", txt).strip().lower()
 
         return txt
 
@@ -209,7 +208,7 @@ class InputSanitizer:
         strict: bool = False,
         preserve_formatting: bool = False,
         redact_pii: bool = True,
-        html_escape: bool = True
+        html_escape: bool = True,
     ) -> SanitizationResult:
         """
         Sanitize input text through full security pipeline.
@@ -231,7 +230,7 @@ class InputSanitizer:
                 sanitized_text="",
                 is_safe=True,
                 threat_level=ThreatLevel.NONE,
-                original_length=0 if text is None else len(text)
+                original_length=0 if text is None else len(text),
             )
 
         original_length = len(text)
@@ -240,7 +239,7 @@ class InputSanitizer:
 
         # Step 1: Enforce input length limit FIRST (DOS protection)
         if len(text) > cls.MAX_INPUT_LENGTH:
-            text = text[:cls.MAX_INPUT_LENGTH]
+            text = text[: cls.MAX_INPUT_LENGTH]
             modifications.append("Truncated to max length")
 
         # Step 2: Unicode normalization (NFC)
@@ -310,8 +309,8 @@ class InputSanitizer:
                     "threat_level": threat_level.value,
                     "original_length": original_length,
                     "sanitized_length": len(text),
-                    "threat_count": len(detected_threats)
-                }
+                    "threat_count": len(detected_threats),
+                },
             )
 
         return SanitizationResult(
@@ -320,14 +319,14 @@ class InputSanitizer:
             threat_level=threat_level,
             detected_threats=detected_threats,
             modifications_made=modifications,
-            original_length=original_length
+            original_length=original_length,
         )
 
     @classmethod
     def _normalize_unicode(cls, text: str) -> tuple[str, bool]:
         """Normalize Unicode to NFC form."""
         original = text
-        text = unicodedata.normalize('NFC', text)
+        text = unicodedata.normalize("NFC", text)
         return text, text != original
 
     @classmethod
@@ -336,13 +335,13 @@ class InputSanitizer:
         original = text
 
         # Remove zero-width characters
-        text = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
+        text = re.sub(r"[\u200B-\u200D\uFEFF]", "", text)
 
         # Remove bidi override characters
-        text = re.sub(r'[\u202A-\u202E]', '', text)
+        text = re.sub(r"[\u202A-\u202E]", "", text)
 
         # Remove zero-width joiner/non-joiner abuse
-        text = re.sub(r'[\u200C\u200D]{2,}', '', text)
+        text = re.sub(r"[\u200C\u200D]{2,}", "", text)
 
         return text, text != original
 
@@ -367,11 +366,7 @@ class InputSanitizer:
             for regex in cls._INJECTION_REGEXES:
                 # Try to match and replace on original text
                 if regex.search(text):
-                    text = regex.sub(
-                        "[REMOVED: Potential security violation]",
-                        text,
-                        count=1
-                    )
+                    text = regex.sub("[REMOVED: Potential security violation]", text, count=1)
 
         return found, text
 
@@ -386,10 +381,10 @@ class InputSanitizer:
                 text = regex.sub("[code removed]", text, count=1)
 
         # Remove code blocks (triple backticks) - careful replacement
-        if '```' in text:
+        if "```" in text:
             found = True
-            text = re.sub(r'```[^`]*```', '[code block removed]', text, flags=re.DOTALL)
-            text = text.replace('```', '')
+            text = re.sub(r"```[^`]*```", "[code block removed]", text, flags=re.DOTALL)
+            text = text.replace("```", "")
 
         return found, text
 
@@ -398,18 +393,18 @@ class InputSanitizer:
         """Redact personally identifiable information."""
         original = text
 
-        text = cls._EMAIL_RE.sub('[EMAIL_REDACTED]', text)
-        text = cls._PHONE_RE.sub('[PHONE_REDACTED]', text)
-        text = cls._SSN_RE.sub('[SSN_REDACTED]', text)
-        text = cls._CARD_RE.sub('[CARD_REDACTED]', text)
+        text = cls._EMAIL_RE.sub("[EMAIL_REDACTED]", text)
+        text = cls._PHONE_RE.sub("[PHONE_REDACTED]", text)
+        text = cls._SSN_RE.sub("[SSN_REDACTED]", text)
+        text = cls._CARD_RE.sub("[CARD_REDACTED]", text)
 
         return text, text != original
 
     @classmethod
     def _remove_control_chars(cls, text: str) -> str:
         """Remove null bytes and control characters."""
-        text = text.replace('\x00', '')
-        text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+        text = text.replace("\x00", "")
+        text = re.sub(r"[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", text)
         return text
 
     @classmethod
@@ -418,19 +413,19 @@ class InputSanitizer:
         Normalize whitespace preserving indentation (P0 fix).
         Only collapses excessive spaces within lines and excessive newlines.
         """
-        lines = text.split('\n')
+        lines = text.split("\n")
         normalized_lines = []
 
         for line in lines:
             stripped = line.lstrip()
-            leading_ws = line[:len(line) - len(stripped)]
+            leading_ws = line[: len(line) - len(stripped)]
             # Collapse multiple internal spaces
-            stripped = re.sub(r'  +', ' ', stripped)
+            stripped = re.sub(r"  +", " ", stripped)
             normalized_lines.append(leading_ws + stripped.rstrip())
 
         # Join and limit consecutive newlines to 2
-        text = '\n'.join(normalized_lines)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = "\n".join(normalized_lines)
+        text = re.sub(r"\n{3,}", "\n\n", text)
 
         return text
 
@@ -443,10 +438,10 @@ class InputSanitizer:
         found = False
 
         # Character repetition
-        pattern = r'(.)\1{' + str(cls.MAX_CHAR_REPETITION) + r',}'
+        pattern = r"(.)\1{" + str(cls.MAX_CHAR_REPETITION) + r",}"
         if re.search(pattern, text):
             found = True
-            text = re.sub(pattern, r'\1' * cls.MAX_CHAR_REPETITION, text)
+            text = re.sub(pattern, r"\1" * cls.MAX_CHAR_REPETITION, text)
 
         # Word repetition - Fixed with groupby
         words = text.split()
@@ -456,26 +451,26 @@ class InputSanitizer:
                 g = list(group)
                 if len(g) > cls.MAX_WORD_REPETITION:
                     found = True
-                clamped.extend(g[:cls.MAX_WORD_REPETITION])
+                clamped.extend(g[: cls.MAX_WORD_REPETITION])
 
             if found:
-                text = ' '.join(clamped)
+                text = " ".join(clamped)
 
         return found, text
 
     @classmethod
     def _enforce_line_length(cls, text: str) -> str:
         """Enforce maximum line length per line."""
-        lines = text.split('\n')
+        lines = text.split("\n")
         truncated_lines = []
 
         for line in lines:
             if len(line) > cls.MAX_LINE_LENGTH:
-                truncated_lines.append(line[:cls.MAX_LINE_LENGTH] + "...")
+                truncated_lines.append(line[: cls.MAX_LINE_LENGTH] + "...")
             else:
                 truncated_lines.append(line)
 
-        return '\n'.join(truncated_lines)
+        return "\n".join(truncated_lines)
 
     @classmethod
     def _calculate_threat_level(cls, threats: list[str]) -> ThreatLevel:

@@ -12,6 +12,7 @@ Responsibilities:
 Integration: Combines sanitizer, prompt_templates, and llm_client
 Version: 1.0.0
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -36,6 +37,7 @@ class AnalysisResult:
         llm_used: Whether LLM was called (vs fallback)
         processing_time_ms: Total processing time in milliseconds
     """
+
     analysis: dict[str, Any]
     sanitization_applied: bool
     threat_level: str
@@ -56,9 +58,7 @@ class MessageAnalyzer:
     """
 
     def __init__(
-        self,
-        gemini_client: GeminiClient | None = None,
-        sanitizer: InputSanitizer | None = None
+        self, gemini_client: GeminiClient | None = None, sanitizer: InputSanitizer | None = None
     ):
         """
         Initialize analyzer with optional dependency injection.
@@ -78,7 +78,7 @@ class MessageAnalyzer:
         *,
         include_examples: bool = True,
         max_examples: int = 3,
-        fallback_on_error: bool = True
+        fallback_on_error: bool = True,
     ) -> AnalysisResult:
         """
         Analyze a message through the complete pipeline.
@@ -97,6 +97,7 @@ class MessageAnalyzer:
             RuntimeError: If LLM fails and fallback disabled
         """
         import time
+
         start_time = time.time()
 
         # Step 1: Sanitize input
@@ -105,8 +106,8 @@ class MessageAnalyzer:
         sanitization_result = self.sanitizer.sanitize(
             request.message,
             html_escape=False,  # LLM doesn't need HTML escaping
-            redact_pii=True,    # Protect user privacy
-            strict=False        # Allow normal code mentions in workplace context
+            redact_pii=True,  # Protect user privacy
+            strict=False,  # Allow normal code mentions in workplace context
         )
 
         sanitized_message = sanitization_result.sanitized_text
@@ -124,18 +125,18 @@ class MessageAnalyzer:
             logger.error("Critical threat detected, blocking analysis")
             # Could raise exception here, but for now use fallback
             return self._create_blocked_result(
-                threat_level=threat_level,
-                processing_time_ms=(time.time() - start_time) * 1000
+                threat_level=threat_level, processing_time_ms=(time.time() - start_time) * 1000
             )
 
         # Step 2: Build prompt context
         context = PromptContext(
             message=sanitized_message,
             sender_id=request.user_id,
-            metadata={
-                "channel_id": request.channel_id,
-                **(request.context or {})
-            } if request.channel_id or request.context else None
+            metadata=(
+                {"channel_id": request.channel_id, **(request.context or {})}
+                if request.channel_id or request.context
+                else None
+            ),
         )
 
         # Step 3: Build prompt with schema and examples
@@ -143,7 +144,7 @@ class MessageAnalyzer:
             context,
             include_schema=True,
             include_examples=include_examples,
-            max_examples=max_examples
+            max_examples=max_examples,
         )
 
         logger.info(
@@ -153,10 +154,7 @@ class MessageAnalyzer:
 
         # Step 4: Call LLM
         try:
-            analysis_dict = self.llm_client.analyze(
-                messages,
-                fallback_on_error=fallback_on_error
-            )
+            analysis_dict = self.llm_client.analyze(messages, fallback_on_error=fallback_on_error)
 
             llm_used = not analysis_dict.get("model_debug", {}).get("fallback_used", False)
 
@@ -192,13 +190,11 @@ class MessageAnalyzer:
             sanitization_applied=bool(sanitization_result.modifications_made),
             threat_level=threat_level.value,
             llm_used=llm_used,
-            processing_time_ms=processing_time_ms
+            processing_time_ms=processing_time_ms,
         )
 
     def _create_blocked_result(
-        self,
-        threat_level: ThreatLevel,
-        processing_time_ms: float
+        self, threat_level: ThreatLevel, processing_time_ms: float
     ) -> AnalysisResult:
         """
         Create result for blocked/rejected messages.
@@ -218,18 +214,13 @@ class MessageAnalyzer:
             "key_phrases": ["Content flagged by security filter"],
             "suggested_reply": "This message has been flagged for review. Please contact support if you believe this is an error.",
             "action_items": ["Review flagged content", "Contact security team"],
-            "confidence_scores": {
-                "sentiment": 0.0,
-                "emotion": 0.0,
-                "category": 0.0,
-                "stress": 0.0
-            },
+            "confidence_scores": {"sentiment": 0.0, "emotion": 0.0, "category": 0.0, "stress": 0.0},
             "urgency": True,
             "model_debug": {
                 "model": "security filter",
                 "threat_level": threat_level.value,
-                "blocked": True
-            }
+                "blocked": True,
+            },
         }
 
         return AnalysisResult(
@@ -237,7 +228,7 @@ class MessageAnalyzer:
             sanitization_applied=True,
             threat_level=threat_level.value,
             llm_used=False,
-            processing_time_ms=processing_time_ms
+            processing_time_ms=processing_time_ms,
         )
 
     def _generate_safe_fallback(self) -> dict[str, Any]:
@@ -255,25 +246,16 @@ class MessageAnalyzer:
             "key_phrases": [],
             "suggested_reply": "Thank you for your message. I'll review this and get back to you shortly.",
             "action_items": ["Review message", "Follow up with sender"],
-            "confidence_scores": {
-                "sentiment": 0.5,
-                "emotion": 0.5,
-                "category": 0.5,
-                "stress": 0.5
-            },
+            "confidence_scores": {"sentiment": 0.5, "emotion": 0.5, "category": 0.5, "stress": 0.5},
             "urgency": False,
             "model_debug": {
                 "model": "fallback",
                 "fallback_used": True,
-                "reason": "Pipeline failure"
-            }
+                "reason": "Pipeline failure",
+            },
         }
 
-    def analyze_batch(
-        self,
-        requests: list[AnalyzeRequest],
-        **kwargs
-    ) -> list[AnalysisResult]:
+    def analyze_batch(self, requests: list[AnalyzeRequest], **kwargs) -> list[AnalysisResult]:
         """
         Analyze multiple messages in batch.
 
@@ -301,7 +283,7 @@ class MessageAnalyzer:
                     sanitization_applied=False,
                     threat_level="unknown",
                     llm_used=False,
-                    processing_time_ms=0.0
+                    processing_time_ms=0.0,
                 )
                 results.append(error_result)
 
@@ -310,10 +292,7 @@ class MessageAnalyzer:
 
 
 # Factory function for easy instantiation
-def create_analyzer(
-    api_key: str | None = None,
-    model_name: str | None = None
-) -> MessageAnalyzer:
+def create_analyzer(api_key: str | None = None, model_name: str | None = None) -> MessageAnalyzer:
     """
     Create configured MessageAnalyzer instance.
 

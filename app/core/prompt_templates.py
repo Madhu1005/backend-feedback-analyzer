@@ -11,6 +11,7 @@ This module provides:
 Security: All examples sanitized, no PII, defensive against prompt injection.
 Version: 1.0.0
 """
+
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -64,16 +65,23 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.85,
                 "emotion": 0.82,
                 "category": 0.80,
-                "stress": 0.88
+                "stress": 0.88,
             },
             "category": "workload",
-            "key_phrases": ["three deadlines this week", "not sure I can finish", "still need to prepare"],
-            "action_items": ["Review current priorities", "Consider deadline extensions", "Offer help with presentation prep"],
+            "key_phrases": [
+                "three deadlines this week",
+                "not sure I can finish",
+                "still need to prepare",
+            ],
+            "action_items": [
+                "Review current priorities",
+                "Consider deadline extensions",
+                "Offer help with presentation prep",
+            ],
             "suggested_reply": "I understand you're juggling multiple deadlines. Let's prioritize together - which tasks are most critical? I can help with the presentation or see if we can adjust any timelines.",
             "urgency": True,
-        }
+        },
     },
-
     # Example 2: Positive feedback
     {
         "user_message": "Just wanted to say the new feature deployment went really smoothly! The team coordination was excellent and we finished ahead of schedule.",
@@ -85,16 +93,19 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.95,
                 "emotion": 0.92,
                 "category": 0.80,
-                "stress": 0.90
+                "stress": 0.90,
             },
             "category": "feedback",
-            "key_phrases": ["went really smoothly", "team coordination was excellent", "finished ahead of schedule"],
+            "key_phrases": [
+                "went really smoothly",
+                "team coordination was excellent",
+                "finished ahead of schedule",
+            ],
             "action_items": ["Acknowledge team success", "Document best practices from deployment"],
             "suggested_reply": "That's fantastic news! Great job to everyone involved. Let's capture what went well so we can replicate this success in future deployments.",
             "urgency": False,
-        }
+        },
     },
-
     # Example 3: Sarcasm detection
     {
         "user_message": "Oh great, another last-minute urgent request. Because we definitely don't have enough on our plates already.",
@@ -106,16 +117,19 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.90,
                 "emotion": 0.85,
                 "category": 0.80,
-                "stress": 0.87
+                "stress": 0.87,
             },
             "category": "workload",
             "key_phrases": ["last-minute urgent request", "enough on our plates"],
-            "action_items": ["Discuss workload management", "Review request prioritization process", "Check for burnout signs"],
+            "action_items": [
+                "Discuss workload management",
+                "Review request prioritization process",
+                "Check for burnout signs",
+            ],
             "suggested_reply": "I hear your frustration about the additional request. Let's talk about your current workload and see how we can better manage priorities or redistribute tasks.",
             "urgency": True,
-        }
+        },
     },
-
     # Example 4: Technical discussion (not negative)
     {
         "user_message": "The API endpoint is returning 500 errors intermittently. I've checked the logs and it seems related to database connection timeouts during peak hours.",
@@ -127,16 +141,23 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.88,
                 "emotion": 0.80,
                 "category": 0.80,
-                "stress": 0.85
+                "stress": 0.85,
             },
             "category": "update",
-            "key_phrases": ["500 errors intermittently", "database connection timeouts", "peak hours"],
-            "action_items": ["Investigate database connection pool settings", "Monitor peak hour performance", "Consider scaling database resources"],
+            "key_phrases": [
+                "500 errors intermittently",
+                "database connection timeouts",
+                "peak hours",
+            ],
+            "action_items": [
+                "Investigate database connection pool settings",
+                "Monitor peak hour performance",
+                "Consider scaling database resources",
+            ],
             "suggested_reply": "Thanks for the detailed investigation. Let's schedule time to review the database connection pool configuration and discuss potential scaling options for peak traffic.",
             "urgency": False,
-        }
+        },
     },
-
     # Example 5: Question with confusion
     {
         "user_message": "I'm confused about the new deployment process. Do we still need to create a release branch or are we going straight to main now? The documentation seems contradictory.",
@@ -148,16 +169,23 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.78,
                 "emotion": 0.85,
                 "category": 0.80,
-                "stress": 0.80
+                "stress": 0.80,
             },
             "category": "question",
-            "key_phrases": ["confused about", "documentation seems contradictory", "release branch"],
-            "action_items": ["Clarify deployment process", "Update documentation for consistency", "Provide step-by-step guide"],
+            "key_phrases": [
+                "confused about",
+                "documentation seems contradictory",
+                "release branch",
+            ],
+            "action_items": [
+                "Clarify deployment process",
+                "Update documentation for consistency",
+                "Provide step-by-step guide",
+            ],
             "suggested_reply": "Good catch on the documentation inconsistency. Let me clarify: we now deploy directly to main after code review. I'll update the docs to reflect this clearly.",
             "urgency": False,
-        }
+        },
     },
-
     # Example 6: Burnout signal
     {
         "user_message": "I've been working 12-hour days for the past two weeks straight and I'm exhausted. I don't think I can keep up this pace much longer.",
@@ -169,16 +197,25 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.95,
                 "emotion": 0.93,
                 "category": 0.80,
-                "stress": 0.95
+                "stress": 0.95,
             },
             "category": "workload",
-            "key_phrases": ["12-hour days", "two weeks straight", "exhausted", "can't keep up this pace"],
-            "action_items": ["Immediate workload review", "Discuss time off", "Address staffing/resource needs", "Check for burnout prevention measures"],
+            "key_phrases": [
+                "12-hour days",
+                "two weeks straight",
+                "exhausted",
+                "can't keep up this pace",
+            ],
+            "action_items": [
+                "Immediate workload review",
+                "Discuss time off",
+                "Address staffing/resource needs",
+                "Check for burnout prevention measures",
+            ],
             "suggested_reply": "I'm concerned about your wellbeing. Let's talk today about your workload and get you some relief. Your health comes first - we need to find a sustainable pace.",
             "urgency": True,
-        }
+        },
     },
-
     # Example 7: Excitement about new project
     {
         "user_message": "I'm really excited to start working on the new AI features! This is exactly the kind of challenge I was hoping for. When can we kick off the project?",
@@ -190,16 +227,19 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.93,
                 "emotion": 0.90,
                 "category": 0.80,
-                "stress": 0.88
+                "stress": 0.88,
             },
             "category": "feedback",
             "key_phrases": ["really excited", "exactly the kind of challenge", "hoping for"],
-            "action_items": ["Schedule project kickoff meeting", "Share project timeline and requirements", "Assign initial tasks"],
+            "action_items": [
+                "Schedule project kickoff meeting",
+                "Share project timeline and requirements",
+                "Assign initial tasks",
+            ],
             "suggested_reply": "Love your enthusiasm! Let's schedule a kickoff meeting this week to go over the project scope and get you started. I'll send calendar invites shortly.",
             "urgency": False,
-        }
+        },
     },
-
     # Example 8: Long message with multiple concerns
     {
         "user_message": "Hey, I wanted to follow up on a few things. First, the client mentioned they need the report by Wednesday instead of Friday - can we make that work? Second, I noticed the test coverage dropped below 80% in the last PR. Should we enforce a stricter policy? Also, I'm planning to take a few days off next month for a family event. Let me know if that timing works. Finally, the new junior developer seems to be struggling with the codebase - maybe we should pair program more? Just thinking out loud here.",
@@ -211,14 +251,24 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 "sentiment": 0.82,
                 "emotion": 0.78,
                 "category": 0.80,
-                "stress": 0.80
+                "stress": 0.80,
             },
             "category": "update",
-            "key_phrases": ["client needs report by Wednesday", "test coverage dropped", "planning to take days off", "junior developer struggling"],
-            "action_items": ["Review report deadline feasibility", "Discuss test coverage policy", "Approve time-off request", "Set up pair programming sessions"],
+            "key_phrases": [
+                "client needs report by Wednesday",
+                "test coverage dropped",
+                "planning to take days off",
+                "junior developer struggling",
+            ],
+            "action_items": [
+                "Review report deadline feasibility",
+                "Discuss test coverage policy",
+                "Approve time-off request",
+                "Set up pair programming sessions",
+            ],
             "suggested_reply": "Thanks for the comprehensive update. Let's tackle these one by one: 1) I'll check if we can move the report deadline, 2) Yes, let's discuss test coverage requirements in our next team meeting, 3) Time off looks fine - send the formal request, 4) Great idea on pair programming - let's schedule regular sessions.",
             "urgency": False,
-        }
+        },
     },
 ]
 
@@ -230,18 +280,13 @@ PROMPT_INJECTION_EXAMPLE = {
         "sentiment": "neutral",
         "emotion": "neutral",
         "stress_score": 0,
-        "confidence_scores": {
-            "sentiment": 0.65,
-            "emotion": 0.60,
-            "category": 0.80,
-            "stress": 0.70
-        },
+        "confidence_scores": {"sentiment": 0.65, "emotion": 0.60, "category": 0.80, "stress": 0.70},
         "category": "general",
         "key_phrases": ["previous instructions", "system prompt", "data access"],
         "action_items": ["Flag unusual message pattern"],
         "suggested_reply": "I'm here to help with workplace communication analysis. Is there a specific work-related message or concern you'd like me to analyze?",
         "urgency": False,
-    }
+    },
 }
 
 
@@ -256,6 +301,7 @@ class PromptContext:
         conversation_history: Optional previous messages for context
         metadata: Optional additional context (channel, timestamp, etc.)
     """
+
     message: str
     sender_id: str | None = None
     conversation_history: list[dict[str, str]] | None = None
@@ -287,7 +333,7 @@ class PromptBuilder:
         include_schema: bool = True,
         include_examples: bool = True,
         max_examples: int = 3,
-        max_context_tokens: int = 4000
+        max_context_tokens: int = 4000,
     ) -> list[dict[str, str]]:
         """
         Build complete prompt for message analysis.
@@ -326,19 +372,19 @@ class PromptBuilder:
         # 2. Add few-shot examples if requested and budget allows
         if include_examples:
             examples_to_include = cls._select_examples(
-                max_count=max_examples,
-                token_budget=remaining_tokens - cls.BUFFER_TOKENS
+                max_count=max_examples, token_budget=remaining_tokens - cls.BUFFER_TOKENS
             )
 
             for example in examples_to_include:
-                messages.append({
-                    "role": "user",
-                    "content": cls._format_user_message(example['user_message'])
-                })
-                messages.append({
-                    "role": "assistant",
-                    "content": json.dumps(example["assistant_response"], indent=2)
-                })
+                messages.append(
+                    {"role": "user", "content": cls._format_user_message(example["user_message"])}
+                )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": json.dumps(example["assistant_response"], indent=2),
+                    }
+                )
                 remaining_tokens -= cls.EXAMPLE_TOKENS_AVG
 
         # 3. Add actual message to analyze with sanitization
@@ -353,8 +399,7 @@ class PromptBuilder:
         # Optional: Add conversation history
         if context.conversation_history:
             history_str = cls._format_conversation_history(
-                context.conversation_history,
-                max_messages=3
+                context.conversation_history, max_messages=3
             )
             if history_str:
                 user_content = f"{history_str}\n\n{user_content}"
@@ -377,11 +422,7 @@ class PromptBuilder:
         return f"Analyze this message:\n{sanitized.sanitized_text}"
 
     @classmethod
-    def _select_examples(
-        cls,
-        max_count: int,
-        token_budget: int
-    ) -> list[dict[str, Any]]:
+    def _select_examples(cls, max_count: int, token_budget: int) -> list[dict[str, Any]]:
         """
         Select diverse few-shot examples within token budget.
 
@@ -391,16 +432,22 @@ class PromptBuilder:
         if token_budget < cls.EXAMPLE_TOKENS_AVG:
             return []
 
-        max_examples_in_budget = min(
-            max_count,
-            token_budget // cls.EXAMPLE_TOKENS_AVG
-        )
+        max_examples_in_budget = min(max_count, token_budget // cls.EXAMPLE_TOKENS_AVG)
 
         if max_examples_in_budget <= 0:
             return []
 
         # Priority ordering: edge cases first
-        priority_indices = [2, 5, 7, 0, 3, 1, 4, 6]  # sarcasm, burnout, long, normal concern, tech, positive, question, excitement
+        priority_indices = [
+            2,
+            5,
+            7,
+            0,
+            3,
+            1,
+            4,
+            6,
+        ]  # sarcasm, burnout, long, normal concern, tech, positive, question, excitement
 
         selected = []
         for idx in priority_indices[:max_examples_in_budget]:
@@ -430,9 +477,7 @@ class PromptBuilder:
 
     @classmethod
     def _format_conversation_history(
-        cls,
-        history: list[dict[str, str]],
-        max_messages: int = 3
+        cls, history: list[dict[str, str]], max_messages: int = 3
     ) -> str:
         """Format recent conversation history for context."""
         if not history:
@@ -464,7 +509,9 @@ class PromptBuilder:
     @classmethod
     def format_json_instruction(cls) -> str:
         """Get strict JSON formatting instruction."""
-        return "Output EXACT JSON only. No markdown, no code blocks, no explanations. Just pure JSON."
+        return (
+            "Output EXACT JSON only. No markdown, no code blocks, no explanations. Just pure JSON."
+        )
 
     @classmethod
     def validate_response_structure(cls, response: str) -> tuple[bool, str | None]:
@@ -541,7 +588,7 @@ class PromptBuilder:
         start_idx = stripped.find("{")
         end_idx = stripped.rfind("}")
         if start_idx >= 0 and end_idx > start_idx:
-            json_str = stripped[start_idx:end_idx + 1]
+            json_str = stripped[start_idx : end_idx + 1]
             try:
                 json.loads(json_str)  # Validate
                 return json_str

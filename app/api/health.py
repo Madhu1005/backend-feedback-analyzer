@@ -14,6 +14,7 @@ These endpoints are used by:
 
 Version: 1.0.0
 """
+
 import logging
 import time
 from typing import Any
@@ -30,6 +31,7 @@ router = APIRouter()
 
 class HealthResponse(BaseModel):
     """Health check response model"""
+
     status: str
     timestamp: float
     version: str
@@ -38,6 +40,7 @@ class HealthResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     """Readiness check response with dependency status"""
+
     status: str
     timestamp: float
     version: str
@@ -51,7 +54,7 @@ class ReadinessResponse(BaseModel):
     status_code=status.HTTP_200_OK,
     summary="Basic health check",
     description="Returns 200 OK if the service is running. Used for liveness probes.",
-    tags=["Health"]
+    tags=["Health"],
 )
 async def health_check() -> HealthResponse:
     """
@@ -69,7 +72,7 @@ async def health_check() -> HealthResponse:
         status="healthy",
         timestamp=time.time(),
         version=settings.app_version,
-        environment=settings.environment
+        environment=settings.environment,
     )
 
 
@@ -79,7 +82,7 @@ async def health_check() -> HealthResponse:
     status_code=status.HTTP_200_OK,
     summary="Liveness check",
     description="Alias for /health. Returns 200 OK if the service is alive.",
-    tags=["Health"]
+    tags=["Health"],
 )
 async def liveness_check() -> HealthResponse:
     """
@@ -99,7 +102,7 @@ async def liveness_check() -> HealthResponse:
     status_code=status.HTTP_200_OK,
     summary="Readiness check",
     description="Checks if service and dependencies are ready to handle requests. Returns 503 if not ready.",
-    tags=["Health"]
+    tags=["Health"],
 )
 async def readiness_check(response: Response) -> ReadinessResponse:
     """
@@ -123,13 +126,13 @@ async def readiness_check(response: Response) -> ReadinessResponse:
     try:
         checks["configuration"] = {
             "status": "healthy",
-            "message": "Configuration loaded successfully"
+            "message": "Configuration loaded successfully",
         }
     except Exception as e:
         logger.error(f"Configuration check failed: {type(e).__name__}")
         checks["configuration"] = {
             "status": "unhealthy",
-            "message": f"Configuration error: {type(e).__name__}"
+            "message": f"Configuration error: {type(e).__name__}",
         }
         all_ready = False
 
@@ -141,7 +144,7 @@ async def readiness_check(response: Response) -> ReadinessResponse:
             checks["llm_service"] = {
                 "status": "healthy",
                 "message": f"LLM client initialized: {settings.gemini_model}",
-                "model": settings.gemini_model
+                "model": settings.gemini_model,
             }
         except ValueError as e:
             # API key missing or invalid
@@ -149,20 +152,20 @@ async def readiness_check(response: Response) -> ReadinessResponse:
             checks["llm_service"] = {
                 "status": "unhealthy",
                 "message": f"LLM configuration error: {type(e).__name__}",
-                "error": "API key missing or invalid"
+                "error": "API key missing or invalid",
             }
             all_ready = False
         except Exception as e:
             logger.error(f"LLM service check failed: {type(e).__name__}")
             checks["llm_service"] = {
                 "status": "unhealthy",
-                "message": f"LLM service error: {type(e).__name__}"
+                "message": f"LLM service error: {type(e).__name__}",
             }
             all_ready = False
     else:
         checks["llm_service"] = {
             "status": "skipped",
-            "message": "Health check disabled in configuration"
+            "message": "Health check disabled in configuration",
         }
 
     # Set response status based on checks
@@ -174,5 +177,5 @@ async def readiness_check(response: Response) -> ReadinessResponse:
         timestamp=time.time(),
         version=settings.app_version,
         environment=settings.environment,
-        checks=checks
+        checks=checks,
     )

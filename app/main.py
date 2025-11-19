@@ -13,6 +13,7 @@ Run with: uvicorn app.main:app --reload
 
 Version: 1.0.0
 """
+
 import logging
 import sys
 import time
@@ -44,6 +45,7 @@ def setup_logging(settings_override=None):
     try:
         if settings_override is None:
             from app.core.config import get_settings
+
             settings = get_settings()
         else:
             settings = settings_override
@@ -51,25 +53,23 @@ def setup_logging(settings_override=None):
         # Minimal fallback logger config if settings unavailable
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.StreamHandler(sys.stdout)]
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)],
         )
         return
 
     # Root logger configuration
     logging.basicConfig(
         level=getattr(logging, settings.log_level),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
 
     # Add file handler if configured
     if settings.log_file:
         file_handler = logging.FileHandler(settings.log_file)
         file_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
         logging.getLogger().addHandler(file_handler)
 
@@ -108,6 +108,7 @@ async def lifespan(app: FastAPI):
     # Verify LLM configuration
     try:
         from app.core.llm_client import create_gemini_client
+
         _ = create_gemini_client()
         logger.info(f"LLM client initialized: {settings.gemini_model}")
     except Exception as e:
@@ -135,7 +136,7 @@ app = FastAPI(
     description="LLM-powered message analysis API for sentiment, emotion, and stress detection",
     docs_url="/docs" if settings.debug else None,  # Disable docs in production
     redoc_url="/redoc" if settings.debug else None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Initialize rate limiter
@@ -205,6 +206,7 @@ async def log_requests(request: Request, call_next: Callable):
 
 # Exception handlers
 
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """
@@ -213,10 +215,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """
     # If detail is a dict with error info, use it directly
     if isinstance(exc.detail, dict):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=exc.detail
-        )
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
     # Otherwise, wrap string detail in standard format
     return JSONResponse(
@@ -225,8 +224,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             "success": False,
             "error": "http_error",
             "message": exc.detail,
-            "status_code": exc.status_code
-        }
+            "status_code": exc.status_code,
+        },
     )
 
 
@@ -237,11 +236,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """
     errors = []
     for error in exc.errors():
-        errors.append({
-            "field": ".".join(str(x) for x in error["loc"]),
-            "message": error["msg"],
-            "type": error["type"]
-        })
+        errors.append(
+            {
+                "field": ".".join(str(x) for x in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+        )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -249,8 +250,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "success": False,
             "error": "validation_error",
             "message": "Request validation failed",
-            "details": {"errors": errors}
-        }
+            "details": {"errors": errors},
+        },
     )
 
 
@@ -265,11 +266,8 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
             "success": False,
             "error": "rate_limit_exceeded",
             "message": "Too many requests. Please try again later.",
-            "details": {
-                "limit": settings.rate_limit_per_minute,
-                "window": "1 minute"
-            }
-        }
+            "details": {"limit": settings.rate_limit_per_minute, "window": "1 minute"},
+        },
     )
 
 
@@ -282,9 +280,8 @@ async def general_exception_handler(request: Request, exc: Exception):
     """
     exception_logger = logging.getLogger(__name__)
     exception_logger.error(
-        f"Unhandled exception in {request.method} {request.url.path}: "
-        f"{type(exc).__name__}",
-        exc_info=True
+        f"Unhandled exception in {request.method} {request.url.path}: " f"{type(exc).__name__}",
+        exc_info=True,
     )
 
     return JSONResponse(
@@ -293,10 +290,8 @@ async def general_exception_handler(request: Request, exc: Exception):
             "success": False,
             "error": "internal_error",
             "message": "An unexpected error occurred. Please try again later.",
-            "details": {
-                "error_type": type(exc).__name__
-            } if settings.debug else None
-        }
+            "details": {"error_type": type(exc).__name__} if settings.debug else None,
+        },
     )
 
 
@@ -315,7 +310,7 @@ async def root():
         "version": settings.app_version,
         "status": "online",
         "docs": "/docs" if settings.debug else "disabled",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -327,5 +322,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=settings.debug,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

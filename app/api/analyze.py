@@ -9,6 +9,7 @@ comprehensive error handling and rate limiting.
 
 Version: 1.0.0
 """
+
 import logging
 import time
 from typing import Any
@@ -34,6 +35,7 @@ def _get_limiter():
     """
     try:
         from app.main import app
+
         return app.state.limiter
     except (ImportError, AttributeError):
         # Fallback for testing or if app not yet initialized
@@ -59,6 +61,7 @@ class AnalysisResponseEnvelope(BaseModel):
 
     Wraps the analysis result with metadata about the request processing.
     """
+
     success: bool = True
     analysis: dict[str, Any] = Field(..., description="Analysis results from LLM")
     sanitization: dict[str, Any] = Field(..., description="Input sanitization details")
@@ -74,21 +77,22 @@ class AnalysisResponseEnvelope(BaseModel):
                     "emotion": "joy",
                     "stress_score": 2,
                     "category": "praise",
-                    "urgency": False
+                    "urgency": False,
                 },
                 "sanitization": {
                     "is_safe": True,
                     "threat_level": "low",
-                    "modifications_made": ["normalized_unicode"]
+                    "modifications_made": ["normalized_unicode"],
                 },
                 "processing_time_ms": 1234.56,
-                "llm_used": True
+                "llm_used": True,
             }
         }
 
 
 class ErrorResponse(BaseModel):
     """Standard error response format"""
+
     success: bool = False
     error: str = Field(..., description="Error type or code")
     message: str = Field(..., description="Human-readable error message")
@@ -100,10 +104,7 @@ class ErrorResponse(BaseModel):
                 "success": False,
                 "error": "validation_error",
                 "message": "Message is too long",
-                "details": {
-                    "field": "message",
-                    "max_length": 10000
-                }
+                "details": {"field": "message", "max_length": 10000},
             }
         }
 
@@ -122,12 +123,11 @@ class ErrorResponse(BaseModel):
         500: {"description": "Internal server error", "model": ErrorResponse},
         503: {"description": "LLM service unavailable", "model": ErrorResponse},
     },
-    tags=["Analysis"]
+    tags=["Analysis"],
 )
 @_rate_limit("60/minute")  # Use centralized rate limiter
 async def analyze_message(
-    request: Request,
-    analyze_request: AnalyzeRequest
+    request: Request, analyze_request: AnalyzeRequest
 ) -> AnalysisResponseEnvelope:
     """
     Analyze a message for sentiment, emotion, and stress level.
@@ -164,8 +164,8 @@ async def analyze_message(
                     "success": False,
                     "error": "service_unavailable",
                     "message": "Analysis service is temporarily unavailable",
-                    "details": {"reason": "LLM service initialization failed"}
-                }
+                    "details": {"reason": "LLM service initialization failed"},
+                },
             ) from e
 
         # Perform analysis
@@ -180,8 +180,8 @@ async def analyze_message(
                     "success": False,
                     "error": "validation_error",
                     "message": str(e),
-                    "details": {"field": "message"}
-                }
+                    "details": {"field": "message"},
+                },
             ) from e
         except Exception as e:
             # Unexpected errors
@@ -192,8 +192,8 @@ async def analyze_message(
                     "success": False,
                     "error": "internal_error",
                     "message": "An unexpected error occurred during analysis",
-                    "details": {"error_type": type(e).__name__}
-                }
+                    "details": {"error_type": type(e).__name__},
+                },
             ) from e
 
         # Calculate total processing time
@@ -212,10 +212,10 @@ async def analyze_message(
             sanitization={
                 "is_safe": result.threat_level != "critical",
                 "threat_level": result.threat_level,
-                "modifications_made": [] if not result.sanitization_applied else ["sanitized"]
+                "modifications_made": [] if not result.sanitization_applied else ["sanitized"],
             },
             processing_time_ms=round(processing_time_ms, 2),
-            llm_used=llm_used
+            llm_used=llm_used,
         )
 
         # Log successful analysis (metadata only, no user content)
@@ -241,6 +241,6 @@ async def analyze_message(
                 "success": False,
                 "error": "internal_error",
                 "message": "An unexpected error occurred",
-                "details": {"error_type": type(e).__name__}
-            }
+                "details": {"error_type": type(e).__name__},
+            },
         ) from e

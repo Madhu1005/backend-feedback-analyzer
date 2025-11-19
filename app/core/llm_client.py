@@ -12,6 +12,7 @@ Responsibilities:
 Provider: Gemini ONLY (gemini-2.0-pro or gemini-2.0-flash)
 Version: 1.0.0
 """
+
 import json
 import logging
 import os
@@ -50,6 +51,7 @@ RETRIABLE_ERRORS = (
 @dataclass
 class LLMConfig:
     """Configuration for LLM client"""
+
     api_key: str
     model_name: str = "gemini-2.0-flash-exp"  # Default to flash for speed
     temperature: float = 0.3  # Low temperature for consistent JSON
@@ -98,7 +100,7 @@ class GeminiClient:
                 HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
+            },
         )
 
         logger.info(
@@ -165,7 +167,7 @@ class GeminiClient:
         wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception_type(RETRIABLE_ERRORS),
         before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True
+        reraise=True,
     )
     def _make_api_call(self, messages: list[dict[str, str]]) -> str:
         """
@@ -200,8 +202,7 @@ class GeminiClient:
             # Make API call with timeout
             start_time = time.time()
             response = self.model.generate_content(
-                full_prompt,
-                request_options={"timeout": self.config.timeout_seconds}
+                full_prompt, request_options={"timeout": self.config.timeout_seconds}
             )
             elapsed = time.time() - start_time
 
@@ -225,9 +226,7 @@ class GeminiClient:
             return text
 
         except Exception as e:
-            logger.error(
-                "Gemini API call failed: %s (no user content logged)", type(e).__name__
-            )
+            logger.error("Gemini API call failed: %s (no user content logged)", type(e).__name__)
             raise
 
     def _strip_code_fences(self, text: str) -> str:
@@ -307,30 +306,30 @@ class GeminiClient:
         """
         # Remove surrounding code fences first
         t = text.strip()
-        t = re.sub(r'^```(?:json)?\s*', '', t, flags=re.IGNORECASE)
-        t = re.sub(r'\s*```$', '', t)
+        t = re.sub(r"^```(?:json)?\s*", "", t, flags=re.IGNORECASE)
+        t = re.sub(r"\s*```$", "", t)
 
         # Extract the first {...} block if there is one
-        start = t.find('{')
-        end = t.rfind('}')
+        start = t.find("{")
+        end = t.rfind("}")
         if start == -1 or end == -1 or end < start:
             logger.warning("No valid JSON object structure found")
             return None
-        body = t[start:end+1]
+        body = t[start : end + 1]
 
         # Remove trailing commas just before } or ] (safer regex)
         # Matches comma followed by whitespace and closing bracket
-        body = re.sub(r',\s*(?=[}\]])', '', body)
+        body = re.sub(r",\s*(?=[}\]])", "", body)
 
         # Try incremental repairs: try parse; if fails, attempt small fixes
         try:
             return json.loads(body)
         except json.JSONDecodeError:
             # Last ditch: try to balance braces (only if clearly truncated)
-            open_count = body.count('{')
-            close_count = body.count('}')
+            open_count = body.count("{")
+            close_count = body.count("}")
             if open_count > close_count and (open_count - close_count) <= 2:
-                body += '}' * (open_count - close_count)
+                body += "}" * (open_count - close_count)
                 try:
                     parsed = json.loads(body)
                     logger.info("JSON repair successful (added closing braces)")
@@ -342,10 +341,7 @@ class GeminiClient:
         return None
 
     def analyze(
-        self,
-        messages: list[dict[str, str]],
-        *,
-        fallback_on_error: bool = True
+        self, messages: list[dict[str, str]], *, fallback_on_error: bool = True
     ) -> dict[str, Any]:
         """
         Analyze message using Gemini API.
@@ -396,11 +392,13 @@ class GeminiClient:
             # Ensure model_debug exists and is a dict
             if "model_debug" not in validated_data or validated_data["model_debug"] is None:
                 validated_data["model_debug"] = {}
-            validated_data["model_debug"].update({
-                "model": self.config.model_name,
-                "latency_ms": round(elapsed_ms, 2),
-                "fallback_used": False
-            })
+            validated_data["model_debug"].update(
+                {
+                    "model": self.config.model_name,
+                    "latency_ms": round(elapsed_ms, 2),
+                    "fallback_used": False,
+                }
+            )
 
             return validated_data
 
@@ -434,18 +432,9 @@ class GeminiClient:
             "key_phrases": [],
             "suggested_reply": "Thank you for your message. Let me review this and get back to you.",
             "action_items": ["Review message", "Follow up with sender"],
-            "confidence_scores": {
-                "sentiment": 0.5,
-                "emotion": 0.5,
-                "category": 0.5,
-                "stress": 0.5
-            },
+            "confidence_scores": {"sentiment": 0.5, "emotion": 0.5, "category": 0.5, "stress": 0.5},
             "urgency": False,
-            "model_debug": {
-                "model": "fallback",
-                "fallback_used": True,
-                "error_type": error_type
-            }
+            "model_debug": {"model": "fallback", "fallback_used": True, "error_type": error_type},
         }
 
         logger.info("Generated fallback response (error_type=%s)", error_type)
@@ -453,9 +442,7 @@ class GeminiClient:
 
 
 def create_gemini_client(
-    api_key: str | None = None,
-    model_name: str | None = None,
-    **kwargs
+    api_key: str | None = None, model_name: str | None = None, **kwargs
 ) -> GeminiClient:
     """
     Factory function to create configured Gemini client.
@@ -476,8 +463,7 @@ def create_gemini_client(
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError(
-                "GEMINI_API_KEY not found in environment. "
-                "Set it or pass api_key parameter."
+                "GEMINI_API_KEY not found in environment. " "Set it or pass api_key parameter."
             )
 
     # Use default model if not specified
@@ -485,10 +471,6 @@ def create_gemini_client(
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
     # Create config
-    config = LLMConfig(
-        api_key=api_key,
-        model_name=model_name,
-        **kwargs
-    )
+    config = LLMConfig(api_key=api_key, model_name=model_name, **kwargs)
 
     return GeminiClient(config)

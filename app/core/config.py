@@ -15,6 +15,7 @@ Environment Variables:
 
 Version: 1.0.0
 """
+
 import os
 
 from pydantic import Field, field_validator
@@ -57,10 +58,7 @@ class Settings(BaseSettings):
 
     # CORS Configuration
     cors_enabled: bool = Field(default=True, alias="CORS_ENABLED")
-    cors_origins: list[str] = Field(
-        default=["*"],
-        alias="CORS_ORIGINS"
-    )
+    cors_origins: list[str] = Field(default=["*"], alias="CORS_ORIGINS")
     cors_allow_credentials: bool = Field(default=True, alias="CORS_ALLOW_CREDENTIALS")
     cors_allow_methods: list[str] = Field(default=["*"], alias="CORS_ALLOW_METHODS")
     cors_allow_headers: list[str] = Field(default=["*"], alias="CORS_ALLOW_HEADERS")
@@ -139,6 +137,7 @@ class Settings(BaseSettings):
 
     class Config:
         """Pydantic settings configuration"""
+
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
