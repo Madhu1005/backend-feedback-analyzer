@@ -324,7 +324,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",  # nosec B104 - Use 0.0.0.0 in production with proper firewall
         port=8000,
         reload=settings.debug,
         log_level=settings.log_level.lower(),

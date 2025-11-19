@@ -35,7 +35,7 @@ jobs:
 
     - name: Run Mypy (type checker)
       run: |
-        mypy app/ --ignore-missing-imports --no-strict-optional --no-warn-return-any --disable-error-code=unreachable
+        mypy app/
 
   complexity:
     runs-on: ubuntu-latest
