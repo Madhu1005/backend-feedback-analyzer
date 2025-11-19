@@ -249,7 +249,7 @@ PROMPT_INJECTION_EXAMPLE = {
 class PromptContext:
     """
     Context information for building analysis prompts.
-    
+
     Attributes:
         message: The message to analyze
         sender_id: Optional sender identifier
@@ -265,7 +265,7 @@ class PromptContext:
 class PromptBuilder:
     """
     Builder for constructing LLM prompts with schema injection and few-shot examples.
-    
+
     Features:
     - Schema-aware prompt construction
     - Token-aware example selection
@@ -291,14 +291,14 @@ class PromptBuilder:
     ) -> list[dict[str, str]]:
         """
         Build complete prompt for message analysis.
-        
+
         Args:
             context: PromptContext with message and optional metadata
             include_schema: Whether to inject JSON schema into system prompt
             include_examples: Whether to include few-shot examples
             max_examples: Maximum number of few-shot examples to include
             max_context_tokens: Maximum token budget for prompt context
-            
+
         Returns:
             List of message dicts in OpenAI chat format:
             [
@@ -367,7 +367,7 @@ class PromptBuilder:
     def _format_user_message(cls, message: str) -> str:
         """
         Format and sanitize user message before embedding in prompt.
-        
+
         CRITICAL: Always sanitize user input to prevent prompt injection.
         """
         # Sanitize the message first (no HTML escape for LLM input)
@@ -384,7 +384,7 @@ class PromptBuilder:
     ) -> list[dict[str, Any]]:
         """
         Select diverse few-shot examples within token budget.
-        
+
         Strategy: Prioritize edge cases (sarcasm, burnout, long messages)
         and ensure variety in sentiment/emotion.
         """
@@ -470,7 +470,7 @@ class PromptBuilder:
     def validate_response_structure(cls, response: str) -> tuple[bool, str | None]:
         """
         Validate that LLM response is pure JSON (not wrapped in markdown).
-        
+
         Returns:
             (is_valid, error_message)
         """
@@ -499,7 +499,7 @@ class PromptBuilder:
     def extract_json_from_response(cls, response: str) -> str | None:
         """
         Attempt to extract JSON from response (defensive recovery).
-        
+
         Tries to handle cases where LLM wraps JSON in markdown despite instructions.
         Returns the JSON string (not parsed dict) or None if extraction fails.
         """

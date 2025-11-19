@@ -63,7 +63,7 @@ class LLMConfig:
 class GeminiClient:
     """
     Gemini API client with production-grade error handling.
-    
+
     Features:
     - Exponential backoff retry logic
     - Timeout enforcement
@@ -75,7 +75,7 @@ class GeminiClient:
     def __init__(self, config: LLMConfig):
         """
         Initialize Gemini client.
-        
+
         Args:
             config: LLM configuration with API key and parameters
         """
@@ -109,15 +109,15 @@ class GeminiClient:
     def _extract_text_from_response(self, response) -> str:
         """
         Robustly extract generated text from Gemini response.
-        
+
         Handles multiple SDK response shapes across versions.
-        
+
         Args:
             response: Gemini API response object
-            
+
         Returns:
             Extracted text content
-            
+
         Raises:
             ValueError: If unable to extract text from response
         """
@@ -170,13 +170,13 @@ class GeminiClient:
     def _make_api_call(self, messages: list[dict[str, str]]) -> str:
         """
         Make API call to Gemini with retry logic.
-        
+
         Args:
             messages: List of message dicts with role and content
-            
+
         Returns:
             Raw response text from Gemini
-            
+
         Raises:
             Exception: On API errors after retries exhausted
         """
@@ -233,13 +233,13 @@ class GeminiClient:
     def _strip_code_fences(self, text: str) -> str:
         """
         Strip markdown code fences from response.
-        
+
         Gemini sometimes wraps JSON in ```json ... ``` despite
         response_mime_type="application/json" setting.
-        
+
         Args:
             text: Raw response text
-            
+
         Returns:
             Cleaned text without code fences
         """
@@ -264,13 +264,13 @@ class GeminiClient:
     def _validate_json_structure(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Validate response against Pydantic schema.
-        
+
         Args:
             data: Parsed JSON dict
-            
+
         Returns:
             Validated dict matching AnalyzeResponse schema
-            
+
         Raises:
             ValueError: If validation fails
         """
@@ -291,17 +291,17 @@ class GeminiClient:
     def _attempt_json_repair(self, text: str) -> dict[str, Any] | None:
         """
         Attempt to repair malformed JSON safely.
-        
+
         Common issues:
         - Code fences (```json)
         - Trailing commas
         - Truncated responses (missing closing braces)
-        
+
         Uses regex to avoid corrupting quoted strings.
-        
+
         Args:
             text: Potentially malformed JSON string
-            
+
         Returns:
             Parsed dict if repair successful, None otherwise
         """
@@ -349,14 +349,14 @@ class GeminiClient:
     ) -> dict[str, Any]:
         """
         Analyze message using Gemini API.
-        
+
         Args:
             messages: Prompt messages in OpenAI format (role, content)
             fallback_on_error: If True, return safe fallback on API errors
-            
+
         Returns:
             Validated dict matching AnalyzeResponse schema
-            
+
         Raises:
             ValueError: If response invalid and fallback disabled
             RuntimeError: If API call fails and fallback disabled
@@ -417,12 +417,12 @@ class GeminiClient:
     def _generate_fallback_response(self, error_type: str | None = None) -> dict[str, Any]:
         """
         Generate safe fallback response when LLM fails.
-        
+
         Returns deterministic neutral response that passes validation.
-        
+
         Args:
             error_type: Type of error that triggered fallback (for debugging)
-        
+
         Returns:
             Dict matching AnalyzeResponse schema
         """
@@ -459,15 +459,15 @@ def create_gemini_client(
 ) -> GeminiClient:
     """
     Factory function to create configured Gemini client.
-    
+
     Args:
         api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
         model_name: Model to use (defaults to gemini-2.0-flash-exp)
         **kwargs: Additional LLMConfig parameters
-        
+
     Returns:
         Configured GeminiClient instance
-        
+
     Raises:
         ValueError: If API key not provided and not in environment
     """

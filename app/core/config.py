@@ -24,7 +24,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """
     Application settings with environment variable support.
-    
+
     Automatically loads from:
     1. Environment variables
     2. .env file in project root
@@ -153,13 +153,13 @@ _settings: Settings | None = None
 def get_settings() -> Settings:
     """
     Get application settings singleton.
-    
+
     Lazily loads settings from environment on first access.
     Subsequent calls return cached instance.
-    
+
     Returns:
         Settings instance with loaded configuration
-        
+
     Raises:
         ValidationError: If required settings are missing or invalid
     """
@@ -172,9 +172,9 @@ def get_settings() -> Settings:
 def reload_settings() -> Settings:
     """
     Force reload settings from environment.
-    
+
     Useful for testing or runtime configuration changes.
-    
+
     Returns:
         Fresh Settings instance
     """

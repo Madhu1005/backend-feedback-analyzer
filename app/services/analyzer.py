@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class AnalysisResult:
     """
     Complete analysis result with metadata.
-    
+
     Attributes:
         analysis: Validated analysis dict matching AnalyzeResponse schema
         sanitization_applied: Whether input was sanitized
@@ -46,7 +46,7 @@ class AnalysisResult:
 class MessageAnalyzer:
     """
     High-level service for analyzing workplace messages.
-    
+
     Orchestrates the complete pipeline:
     1. Input sanitization (security)
     2. Prompt building (few-shot + schema)
@@ -62,7 +62,7 @@ class MessageAnalyzer:
     ):
         """
         Initialize analyzer with optional dependency injection.
-        
+
         Args:
             gemini_client: Pre-configured Gemini client (creates default if None)
             sanitizer: Pre-configured sanitizer (creates default if None)
@@ -82,16 +82,16 @@ class MessageAnalyzer:
     ) -> AnalysisResult:
         """
         Analyze a message through the complete pipeline.
-        
+
         Args:
             request: Validated AnalyzeRequest with message and metadata
             include_examples: Whether to include few-shot examples in prompt
             max_examples: Maximum number of examples to include
             fallback_on_error: Whether to use fallback response on LLM errors
-            
+
         Returns:
             AnalysisResult with validated analysis and metadata
-            
+
         Raises:
             ValueError: If sanitization detects critical threat (optional)
             RuntimeError: If LLM fails and fallback disabled
@@ -202,11 +202,11 @@ class MessageAnalyzer:
     ) -> AnalysisResult:
         """
         Create result for blocked/rejected messages.
-        
+
         Args:
             threat_level: Detected threat level
             processing_time_ms: Processing time
-            
+
         Returns:
             AnalysisResult indicating blocked content
         """
@@ -243,7 +243,7 @@ class MessageAnalyzer:
     def _generate_safe_fallback(self) -> dict[str, Any]:
         """
         Generate safe fallback when both LLM and sanitizer fail.
-        
+
         Returns:
             Dict matching AnalyzeResponse schema
         """
@@ -276,11 +276,11 @@ class MessageAnalyzer:
     ) -> list[AnalysisResult]:
         """
         Analyze multiple messages in batch.
-        
+
         Args:
             requests: List of AnalyzeRequest objects
             **kwargs: Additional arguments passed to analyze()
-            
+
         Returns:
             List of AnalysisResult objects (same order as input)
         """
@@ -316,11 +316,11 @@ def create_analyzer(
 ) -> MessageAnalyzer:
     """
     Create configured MessageAnalyzer instance.
-    
+
     Args:
         api_key: Gemini API key (defaults to env var)
         model_name: Model to use (defaults to gemini-2.0-flash-exp)
-        
+
     Returns:
         Configured MessageAnalyzer
     """

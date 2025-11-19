@@ -36,7 +36,7 @@ from app.core.config import get_settings
 def setup_logging(settings_override=None):
     """
     Configure application logging.
-    
+
     Args:
         settings_override: Optional Settings instance. If None, attempts to load settings.
                           Falls back to basic logging if settings unavailable.
@@ -88,7 +88,7 @@ def setup_logging(settings_override=None):
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    
+
     Handles startup and shutdown events:
     - Startup: Load configuration, initialize logging, verify dependencies
     - Shutdown: Cleanup resources
@@ -161,7 +161,7 @@ if settings.cors_enabled:
 async def add_request_id(request: Request, call_next: Callable):
     """
     Add unique request ID to each request for tracking.
-    
+
     Request ID is available in logs and response headers.
     """
     request_id = f"{int(time.time() * 1000)}-{id(request)}"
@@ -178,7 +178,7 @@ async def add_request_id(request: Request, call_next: Callable):
 async def log_requests(request: Request, call_next: Callable):
     """
     Log all HTTP requests with timing information.
-    
+
     Logs: method, path, status code, processing time
     """
     start_time = time.time()
@@ -277,7 +277,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 async def general_exception_handler(request: Request, exc: Exception):
     """
     Catch-all handler for unexpected exceptions.
-    
+
     Logs full error details but returns safe error message to client.
     """
     exception_logger = logging.getLogger(__name__)

@@ -245,10 +245,10 @@ class AnalyzeResponse(BaseModel):
 
 def _remove_titles_recursive(obj: Any) -> Any:
     """Recursively remove title fields from schema dict.
-    
+
     Args:
         obj: Schema object (dict, list, or primitive)
-        
+
     Returns:
         Cleaned object without title fields
     """
@@ -265,7 +265,7 @@ def _remove_titles_recursive(obj: Any) -> Any:
 
 def get_clean_schema() -> dict[str, Any]:
     """Get JSON schema without title fields for cleaner LLM prompts.
-    
+
     Returns:
         Simplified schema suitable for inclusion in system prompts
     """

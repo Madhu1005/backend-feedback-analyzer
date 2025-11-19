@@ -66,7 +66,7 @@ class ThreatLevel(str, Enum):
 class SanitizationResult:
     """
     Immutable result of sanitization process.
-    
+
     Attributes:
         sanitized_text: Cleaned and safe text
         is_safe: Whether text passes safety threshold
@@ -86,7 +86,7 @@ class SanitizationResult:
 class InputSanitizer:
     """
     Production-grade input sanitizer with prompt injection detection.
-    
+
     Security layers:
     1. Unicode normalization (NFC + confusable detection)
     2. Prompt injection pattern detection with whitespace normalization
@@ -95,7 +95,7 @@ class InputSanitizer:
     5. DOS protection (repetition + length limits)
     6. Control character removal
     7. HTML escaping
-    
+
     Thread-safe, stateless operation.
     """
 
@@ -179,7 +179,7 @@ class InputSanitizer:
     def _canonicalize_for_matching(cls, text: str) -> str:
         """
         Produce canonical form for pattern matching (P0-3 fix).
-        
+
         Process:
         1. Unicode normalization (NFC)
         2. Confusable folding
@@ -213,14 +213,14 @@ class InputSanitizer:
     ) -> SanitizationResult:
         """
         Sanitize input text through full security pipeline.
-        
+
         Args:
             text: Raw input text (None returns empty result)
             strict: If True, applies aggressive code block removal
             preserve_formatting: If True, preserves indentation/structure
             redact_pii: If True, redacts PII
             html_escape: If True, applies HTML escaping (default True)
-            
+
         Returns:
             SanitizationResult with sanitized text and threat assessment
         """
@@ -505,10 +505,10 @@ class InputSanitizer:
     def is_safe_for_logging(cls, text: str) -> bool:
         """
         Check if text is safe for logging (no PII).
-        
+
         Args:
             text: Text to check
-            
+
         Returns:
             True if text contains no detected PII
         """
@@ -532,10 +532,10 @@ class InputSanitizer:
     def redact_pii(cls, text: str | None) -> str | None:
         """
         Convenience method to redact PII from text.
-        
+
         Args:
             text: Text to redact (can be None)
-            
+
         Returns:
             Text with PII redacted, or None if input was None
         """

@@ -56,10 +56,10 @@ class ReadinessResponse(BaseModel):
 async def health_check() -> HealthResponse:
     """
     Basic health check endpoint.
-    
+
     Always returns 200 OK if the service is running.
     Use this for Kubernetes liveness probes.
-    
+
     Returns:
         HealthResponse with basic service info
     """
@@ -84,9 +84,9 @@ async def health_check() -> HealthResponse:
 async def liveness_check() -> HealthResponse:
     """
     Liveness check endpoint (alias for /health).
-    
+
     Returns 200 OK if the service is running.
-    
+
     Returns:
         HealthResponse with basic service info
     """
@@ -104,15 +104,15 @@ async def liveness_check() -> HealthResponse:
 async def readiness_check(response: Response) -> ReadinessResponse:
     """
     Readiness check endpoint with dependency verification.
-    
+
     Checks:
     1. LLM service connectivity (optional, based on config)
     2. Configuration validity
-    
+
     Returns:
         - 200 OK if all dependencies are ready
         - 503 Service Unavailable if any dependency fails
-        
+
     Use this for Kubernetes readiness probes.
     """
     settings = get_settings()
