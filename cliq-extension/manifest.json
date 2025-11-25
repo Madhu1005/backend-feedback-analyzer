@@ -1,0 +1,140 @@
+{
+  "name": "Employee Sentiment Analyzer",
+  "description": "AI-powered sentiment analysis bot that detects employee emotions, stress levels, and provides empathetic responses in real-time.",
+  "version": "1.0.0",
+  "icon": "/assets/icon.png",
+  "homepage": "https://github.com/Madhu1005/backend-feedback-analyzer",
+  "developer": {
+    "name": "Your Organization",
+    "email": "support@yourorg.com",
+    "website": "https://yourorg.com"
+  },
+  "permissions": [
+    "channels.read",
+    "channels.messages.read",
+    "users.read",
+    "bot.send",
+    "commands.execute"
+  ],
+  "bots": [
+    {
+      "name": "emo-bot",
+      "uniqueName": "emobot",
+      "description": "Sentiment analysis bot that analyzes employee messages and provides insights",
+      "webhookUrl": "${WEBHOOK_BASE_URL}/bot/webhook",
+      "capabilities": [
+        "messageHandler",
+        "participantHandler"
+      ],
+      "subscriptions": [
+        "conversation",
+        "channel.message"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "/team-mood",
+      "description": "Display team mood analytics and trends for today",
+      "hint": "Get real-time team sentiment insights",
+      "handler": "${WEBHOOK_BASE_URL}/commands/team-mood",
+      "help": {
+        "description": "Shows aggregated sentiment data including positive/neutral/negative percentages, top issues, average stress score, and trend indicators.",
+        "examples": [
+          "/team-mood"
+        ]
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "name": "team-dashboard",
+      "title": "Team Sentiment Dashboard",
+      "description": "Visual dashboard showing team mood trends, stress levels, and key insights",
+      "icon": "/assets/dashboard-icon.png",
+      "location": "sidebar",
+      "dimensions": {
+        "width": "400px",
+        "height": "600px"
+      },
+      "url": "${WEBHOOK_BASE_URL}/widgets/dashboard",
+      "permissions": [
+        "channels.read",
+        "users.read"
+      ]
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "analyze-sentiment",
+      "label": "Analyze Sentiment",
+      "hint": "Get AI sentiment analysis for this message",
+      "handler": "${WEBHOOK_BASE_URL}/actions/analyze",
+      "icon": "/assets/analyze-icon.png"
+    },
+    {
+      "name": "suggest-reply",
+      "label": "Suggest Reply",
+      "hint": "Get AI-suggested empathetic response",
+      "handler": "${WEBHOOK_BASE_URL}/actions/suggest-reply",
+      "icon": "/assets/reply-icon.png"
+    }
+  ],
+  "functions": [
+    {
+      "name": "analyzeMessage",
+      "handler": "${WEBHOOK_BASE_URL}/functions/analyze"
+    }
+  ],
+  "settings": {
+    "fields": [
+      {
+        "name": "backend_api_url",
+        "label": "Backend API URL",
+        "type": "url",
+        "placeholder": "https://your-railway-app.railway.app",
+        "required": true,
+        "help": "The base URL of your deployed FastAPI backend"
+      },
+      {
+        "name": "stress_threshold",
+        "label": "High Stress Alert Threshold",
+        "type": "number",
+        "placeholder": "7",
+        "default": 7,
+        "required": false,
+        "help": "Messages with stress score above this value will trigger alerts (1-10)"
+      },
+      {
+        "name": "auto_reply",
+        "label": "Enable Auto-Reply Suggestions",
+        "type": "checkbox",
+        "default": true,
+        "required": false,
+        "help": "Automatically show suggested replies for negative sentiment messages"
+      },
+      {
+        "name": "admin_channel",
+        "label": "Admin Alert Channel ID",
+        "type": "text",
+        "placeholder": "channel_id_here",
+        "required": false,
+        "help": "Channel ID where high-stress alerts should be sent to HR/Admin"
+      }
+    ]
+  },
+  "security": {
+    "verificationToken": "${ZOHO_VERIFICATION_TOKEN}",
+    "allowedOrigins": [
+      "https://cliq.zoho.com",
+      "https://cliq.zoho.eu",
+      "https://cliq.zoho.in"
+    ]
+  },
+  "assets": [
+    "/assets/icon.png",
+    "/assets/dashboard-icon.png",
+    "/assets/analyze-icon.png",
+    "/assets/reply-icon.png"
+  ]
+}
