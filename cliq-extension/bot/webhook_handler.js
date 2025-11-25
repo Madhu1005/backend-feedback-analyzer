@@ -87,15 +87,20 @@ class BotWebhookHandler {
     }
 
     // Timing-safe comparison
-    const crypto = require('crypto');
-    const expected = Buffer.from(this.verificationToken);
-    const actual = Buffer.from(token);
-    
-    if (expected.length !== actual.length) {
+    try {
+      const crypto = require('crypto');
+      const expected = Buffer.from(this.verificationToken);
+      const actual = Buffer.from(token);
+      
+      if (expected.length !== actual.length) {
+        return false;
+      }
+      
+      return crypto.timingSafeEqual(expected, actual);
+    } catch (error) {
+      console.error('[Bot] Token verification error:', error);
       return false;
     }
-    
-    return crypto.timingSafeEqual(expected, actual);
   }
 
   /**
